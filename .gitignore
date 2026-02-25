@@ -1,0 +1,17 @@
+# Secrets & sensitive files
+terraform/terraform.tfvars
+terraform/*.pem
+terraform/*.key
+
+# Terraform state (use remote backend in production)
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+
+# n8n local data
+n8n/data/
+
+# OS
+.DS_Store
+Thumbs.db

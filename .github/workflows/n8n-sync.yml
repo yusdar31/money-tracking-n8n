@@ -1,0 +1,147 @@
+###############################################################
+# .github/workflows/n8n-sync.yml
+#
+# Syncs the n8n workflow JSON to the running n8n instance
+# via n8n REST API whenever the JSON file changes.
+#
+# Required GitHub Secrets:
+#   N8N_URL               — e.g. https://n8n.yourdomain.com
+#   N8N_API_KEY           — Generate in n8n → Settings → API
+#   N8N_WORKFLOW_ID       — Workflow ID from n8n (or leave empty to create new)
+###############################################################
+
+name: "n8n Workflow Sync"
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "n8n/**.json"
+
+jobs:
+  sync:
+    name: "Sync Workflow to n8n"
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect Changed Workflow Files
+        id: changed
+        run: |
+          CHANGED=$(git diff --name-only HEAD~1 HEAD -- 'n8n/*.json')
+          echo "files=$CHANGED" >> $GITHUB_OUTPUT
+          echo "Changed workflow files: $CHANGED"
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      # ── Strategy: Update if workflow ID known, else Create ──
+      - name: Upload / Update Workflow
+        env:
+          N8N_URL:         ${{ secrets.N8N_URL }}
+          N8N_API_KEY:     ${{ secrets.N8N_API_KEY }}
+          N8N_WORKFLOW_ID: ${{ secrets.N8N_WORKFLOW_ID }}
+        run: |
+          WORKFLOW_FILE="n8n/jago_expense_tracker_workflow.json"
+
+          if [ ! -f "$WORKFLOW_FILE" ]; then
+            echo "Workflow file not found: $WORKFLOW_FILE"
+            exit 1
+          fi
+
+          echo "=== Workflow file: $WORKFLOW_FILE ==="
+
+          if [ -n "$N8N_WORKFLOW_ID" ]; then
+            # ── UPDATE existing workflow ──
+            echo "Updating existing workflow ID: $N8N_WORKFLOW_ID"
+
+            HTTP_STATUS=$(curl -s -o /tmp/n8n_response.json -w "%{http_code}" \
+              -X PUT "${N8N_URL}/api/v1/workflows/${N8N_WORKFLOW_ID}" \
+              -H "X-N8N-API-KEY: ${N8N_API_KEY}" \
+              -H "Content-Type: application/json" \
+              -d @"${WORKFLOW_FILE}")
+
+            echo "HTTP Status: $HTTP_STATUS"
+            cat /tmp/n8n_response.json | jq .
+
+            if [ "$HTTP_STATUS" != "200" ]; then
+              echo "❌ Failed to update workflow"
+              exit 1
+            fi
+
+            echo "✅ Workflow updated successfully"
+            WORKFLOW_ID=$(cat /tmp/n8n_response.json | jq -r '.id')
+
+          else
+            # ── CREATE new workflow ──
+            echo "Creating new workflow..."
+
+            HTTP_STATUS=$(curl -s -o /tmp/n8n_response.json -w "%{http_code}" \
+              -X POST "${N8N_URL}/api/v1/workflows" \
+              -H "X-N8N-API-KEY: ${N8N_API_KEY}" \
+              -H "Content-Type: application/json" \
+              -d @"${WORKFLOW_FILE}")
+
+            echo "HTTP Status: $HTTP_STATUS"
+            cat /tmp/n8n_response.json | jq .
+
+            if [ "$HTTP_STATUS" != "200" ] && [ "$HTTP_STATUS" != "201" ]; then
+              echo "❌ Failed to create workflow"
+              exit 1
+            fi
+
+            WORKFLOW_ID=$(cat /tmp/n8n_response.json | jq -r '.id')
+            echo "✅ Workflow created! ID: $WORKFLOW_ID"
+            echo ""
+            echo "⚠️  ACTION REQUIRED: Add this workflow ID to GitHub Secrets:"
+            echo "   N8N_WORKFLOW_ID = $WORKFLOW_ID"
+          fi
+
+          # ── Activate workflow ──
+          echo "=== Activating workflow ==="
+          ACT_STATUS=$(curl -s -o /tmp/n8n_activate.json -w "%{http_code}" \
+            -X PATCH "${N8N_URL}/api/v1/workflows/${WORKFLOW_ID}" \
+            -H "X-N8N-API-KEY: ${N8N_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{"active": true}')
+
+          echo "Activate HTTP Status: $ACT_STATUS"
+          if [ "$ACT_STATUS" = "200" ]; then
+            echo "✅ Workflow is now ACTIVE"
+          else
+            echo "⚠️  Could not auto-activate (manual activation may be needed)"
+          fi
+
+      - name: Verify Workflow Status
+        env:
+          N8N_URL:         ${{ secrets.N8N_URL }}
+          N8N_API_KEY:     ${{ secrets.N8N_API_KEY }}
+          N8N_WORKFLOW_ID: ${{ secrets.N8N_WORKFLOW_ID }}
+        run: |
+          if [ -z "$N8N_WORKFLOW_ID" ]; then
+            echo "No workflow ID — skipping verification"
+            exit 0
+          fi
+
+          STATUS=$(curl -s \
+            "${N8N_URL}/api/v1/workflows/${N8N_WORKFLOW_ID}" \
+            -H "X-N8N-API-KEY: ${N8N_API_KEY}" | jq -r '.active')
+
+          echo "Workflow active: $STATUS"
+
+          if [ "$STATUS" = "true" ]; then
+            echo "✅ Workflow is running"
+          else
+            echo "⚠️ Workflow is NOT active — activate it manually in n8n UI"
+          fi
+
+      - name: Write Step Summary
+        if: always()
+        run: |
+          echo "## 🔄 n8n Workflow Sync" >> $GITHUB_STEP_SUMMARY
+          echo "- Changed files: \`${{ steps.changed.outputs.files }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- n8n URL: ${{ secrets.N8N_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: **${{ job.status }}**" >> $GITHUB_STEP_SUMMARY

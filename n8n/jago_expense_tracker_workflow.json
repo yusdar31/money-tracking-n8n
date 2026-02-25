@@ -1,0 +1,204 @@
+{
+  "name": "Bank Jago Expense Tracker",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [{ "mode": "everyMinute" }]
+        },
+        "simple": true,
+        "filters": {
+          "sender": "noreply@jago.com",
+          "subject": "Transaksi"
+        },
+        "options": {
+          "downloadAttachments": false
+        }
+      },
+      "id": "node-gmail-trigger",
+      "name": "Gmail Trigger - Bank Jago",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GMAIL_CREDENTIAL_ID",
+          "name": "Gmail Account"
+        }
+      },
+      "notes": "Polls Gmail every minute for emails from Bank Jago. Update 'sender' and 'subject' filter to match actual Jago email format."
+    },
+    {
+      "parameters": {
+        "jsCode": "// ================================================================\n// Node: Extract Transaction Data from Jago Email\n// Adjust regex patterns to match actual Bank Jago email format\n// ================================================================\n\nconst item = $input.first();\nconst subject = item.json.subject || '';\nconst body    = item.json.text   || item.json.snippet || '';\nconst html    = item.json.html   || '';\nconst rawText = html ? html.replace(/<[^>]+>/g, ' ') : body;\n\n// --- Determine transaction type from subject ---\n// Adjust keywords to match Jago's actual email subjects\nlet tipe = 'debit';\nif (/masuk|kredit|transfer masuk|top.?up/i.test(subject + rawText)) {\n  tipe = 'kredit';\n}\n\n// --- Extract Nominal ---\n// Pattern: Rp 1.250.000 or Rp1.250.000,00 or IDR 1,250,000\nconst nominalMatch = rawText.match(\n  /(?:Rp\\.?\\s?|IDR\\s?)([\\d.,]+)/i\n);\nlet nominal = 0;\nif (nominalMatch) {\n  // Normalize: remove dots used as thousand sep, replace comma decimal\n  nominal = parseFloat(\n    nominalMatch[1].replace(/\\./g, '').replace(',', '.')\n  );\n}\n\n// --- Extract Tanggal & Waktu ---\n// Pattern: 25 Feb 2025, 10:30 WIB\nconst dateMatch = rawText.match(\n  /(\\d{1,2})\\s+(Jan(?:uari)?|Feb(?:ruari)?|Mar(?:et)?|Apr(?:il)?|Mei|Jun(?:i)?|Jul(?:i)?|Agt|Agu(?:stus)?|Sep(?:tember)?|Okt(?:ober)?|Nov(?:ember)?|Des(?:ember)?)\\s+(\\d{4})/i\n);\nconst timeMatch = rawText.match(/(\\d{2}:\\d{2})(?:\\s*WIB)?/i);\n\nconst monthMap = {\n  jan: '01', januari: '01', feb: '02', februari: '02',\n  mar: '03', maret: '03', apr: '04', april: '04',\n  mei: '05', jun: '06', juni: '06', jul: '07', juli: '07',\n  agt: '08', agu: '08', agustus: '08', sep: '09', september: '09',\n  okt: '10', oktober: '10', nov: '11', november: '11',\n  des: '12', desember: '12'\n};\n\nlet tanggalWaktu = new Date().toISOString(); // fallback = now\nif (dateMatch) {\n  const day = dateMatch[1].padStart(2, '0');\n  const mon = monthMap[dateMatch[2].toLowerCase().slice(0, 3)];\n  const yr  = dateMatch[3];\n  const hr  = timeMatch ? timeMatch[1] : '00:00';\n  // WIB = UTC+7\n  tanggalWaktu = `${yr}-${mon}-${day}T${hr}:00+07:00`;\n}\n\n// --- Extract Merchant / Deskripsi ---\n// Common patterns: 'Pembayaran ke MERCHANT_NAME' or 'Transfer ke ...'\nconst merchantPatterns = [\n  /(?:ke|to|merchant|di|at)\\s*:?\\s*([A-Za-z0-9 &.,'-]{3,50})/i,\n  /(?:pembayaran|payment)\\s+(?:ke|to)?\\s*:?\\s*([A-Za-z0-9 &.,'-]{3,50})/i,\n];\nlet merchant = 'Unknown';\nfor (const pat of merchantPatterns) {\n  const m = rawText.match(pat);\n  if (m) { merchant = m[1].trim(); break; }\n}\n\n// --- Auto-categorize ---\nconst kategoriMap = [\n  { keywords: /makan|resto|food|warung|cafe|kfc|mcd|gopay food|grab food/i, kat: 'Makanan & Minuman' },\n  { keywords: /tokopedia|shopee|lazada|blibli|toko/i,                        kat: 'Belanja Online' },\n  { keywords: /gojek|grab|ojek|taxi|transjakarta|krl|mrt/i,                  kat: 'Transportasi' },\n  { keywords: /pln|listrik|pdam|air|internet|wifi|telkom/i,                  kat: 'Utilitas' },\n  { keywords: /netflix|spotify|youtube|disney|steam/i,                        kat: 'Hiburan & Langganan' },\n  { keywords: /atm|tunai|cash|tarik/i,                                        kat: 'Tarik Tunai' },\n  { keywords: /transfer/i,                                                    kat: 'Transfer' },\n];\nlet kategori = 'Lain-lain';\nfor (const k of kategoriMap) {\n  if (k.keywords.test(merchant + ' ' + rawText)) {\n    kategori = k.kat;\n    break;\n  }\n}\n\n// --- Validation ---\nif (nominal === 0) {\n  throw new Error(`Nominal tidak ditemukan di email: ${subject}`);\n}\n\nreturn [{\n  json: {\n    tanggal_waktu:      tanggalWaktu,\n    tipe,\n    nominal,\n    merchant_deskripsi: merchant,\n    kategori_otomatis:  kategori,\n    email_subject:      subject,\n    raw_email_body:     rawText.slice(0, 1000), // limit for storage\n  }\n}];"
+      },
+      "id": "node-extract",
+      "name": "Extract Transaction Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300],
+      "notes": "Regex-based extraction. Adjust patterns if Bank Jago changes email template."
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": {
+          "__rl": true,
+          "value": "public",
+          "mode": "list"
+        },
+        "table": {
+          "__rl": true,
+          "value": "jago_transactions",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tanggal_waktu":      "={{ $json.tanggal_waktu }}",
+            "tipe":               "={{ $json.tipe }}",
+            "nominal":            "={{ $json.nominal }}",
+            "merchant_deskripsi": "={{ $json.merchant_deskripsi }}",
+            "kategori_otomatis":  "={{ $json.kategori_otomatis }}",
+            "email_subject":      "={{ $json.email_subject }}",
+            "raw_email_body":     "={{ $json.raw_email_body }}"
+          }
+        },
+        "options": {
+          "outputDataEnrichmentMode": "append",
+          "skipOnConflict": false
+        }
+      },
+      "id": "node-postgres-insert",
+      "name": "Insert to jago_transactions",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [720, 300],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "RDS PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  mb.total_pengeluaran,\n  mb.total_pemasukan,\n  mb.target_saving,\n  mb.sisa_budget,\n  mb.pct_saving_risk,\n  CASE\n    WHEN mb.pct_saving_risk >= 100 THEN 'DANGER'\n    WHEN mb.pct_saving_risk >= 80  THEN 'WARNING'\n    ELSE 'SAFE'\n  END AS status_budget\nFROM monthly_budget mb\nWHERE mb.bulan = DATE_TRUNC('month', NOW())::DATE\nLIMIT 1;",
+        "options": {}
+      },
+      "id": "node-check-budget",
+      "name": "Get Monthly Budget Status",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [960, 300],
+      "credentials": {
+        "postgres": {
+          "id": "POSTGRES_CREDENTIAL_ID",
+          "name": "RDS PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-warning",
+              "leftValue": "={{ $json.status_budget }}",
+              "rightValue": "SAFE",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "node-if-budget",
+      "name": "IF Budget Warning/Danger",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1200, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $vars.TELEGRAM_CHAT_ID }}",
+        "text": "={{ \n  '🚨 *ALERT BUDGET - ' + ($json.status_budget === 'DANGER' ? 'BAHAYA!' : 'PERINGATAN!') + '*\\n\\n' +\n  '📅 Bulan: ' + new Date().toLocaleDateString('id-ID', {month: 'long', year: 'numeric'}) + '\\n' +\n  '💸 Total Pengeluaran: Rp ' + Number($json.total_pengeluaran).toLocaleString('id-ID') + '\\n' +\n  '💰 Total Pemasukan: Rp '  + Number($json.total_pemasukan).toLocaleString('id-ID') + '\\n' +\n  '🎯 Target Saving: Rp '   + Number($json.target_saving).toLocaleString('id-ID') + '\\n' +\n  '📊 Sisa Budget: Rp '     + Number($json.sisa_budget).toLocaleString('id-ID') + '\\n' +\n  '⚠️ Risiko: '             + $json.pct_saving_risk + '%\\n\\n' +\n  ($json.status_budget === 'DANGER' \n    ? '❌ Target saving Rp 3.000.000 TERANCAM! Kurangi pengeluaran segera!' \n    : '⚠️ Pengeluaran mendekati batas aman. Hati-hati!') +\n  '\\n\\n_Transaksi terakhir: ' + $node[\"Extract Transaction Data\"].json.merchant_deskripsi + ' - Rp ' + Number($node[\"Extract Transaction Data\"].json.nominal).toLocaleString('id-ID') + '_'\n}}",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "disable_notification": false
+        }
+      },
+      "id": "node-telegram-alert",
+      "name": "Telegram Budget Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1440, 200],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $vars.TELEGRAM_CHAT_ID }}",
+        "text": "={{ \n  '✅ *Transaksi Tercatat*\\n\\n' +\n  '💳 Tipe: ' + $node[\"Extract Transaction Data\"].json.tipe.toUpperCase() + '\\n' +\n  '💰 Nominal: Rp ' + Number($node[\"Extract Transaction Data\"].json.nominal).toLocaleString('id-ID') + '\\n' +\n  '🏪 Merchant: ' + $node[\"Extract Transaction Data\"].json.merchant_deskripsi + '\\n' +\n  '🏷️ Kategori: ' + $node[\"Extract Transaction Data\"].json.kategori_otomatis + '\\n' +\n  '📊 Budget Status: ' + $json.status_budget + ' (' + $json.pct_saving_risk + '%)'\n}}",
+        "additionalFields": {
+          "parse_mode": "Markdown",
+          "disable_notification": true
+        }
+      },
+      "id": "node-telegram-confirm",
+      "name": "Telegram Transaction Confirm",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1440, 400],
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Gmail Trigger - Bank Jago": {
+      "main": [[{ "node": "Extract Transaction Data", "type": "main", "index": 0 }]]
+    },
+    "Extract Transaction Data": {
+      "main": [[{ "node": "Insert to jago_transactions", "type": "main", "index": 0 }]]
+    },
+    "Insert to jago_transactions": {
+      "main": [[{ "node": "Get Monthly Budget Status", "type": "main", "index": 0 }]]
+    },
+    "Get Monthly Budget Status": {
+      "main": [[{ "node": "IF Budget Warning/Danger", "type": "main", "index": 0 }]]
+    },
+    "IF Budget Warning/Danger": {
+      "main": [
+        [{ "node": "Telegram Budget Alert",       "type": "main", "index": 0 }],
+        [{ "node": "Telegram Transaction Confirm", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": ""
+  },
+  "tags": [{ "name": "expense-tracker", "createdAt": "2025-01-01" }]
+}

@@ -1,0 +1,20 @@
+###############################################################
+# terraform.tfvars — FILL IN YOUR ACTUAL VALUES
+# DO NOT commit this file to git (already in .gitignore)
+###############################################################
+
+aws_region   = "ap-southeast-1"
+project_name = "expense-tracker"
+
+# Run: curl ifconfig.me  — then append /32
+my_ip_cidr = "YOUR_PUBLIC_IP/32"
+
+# Run: cat ~/.ssh/id_rsa.pub
+ssh_public_key = "ssh-rsa AAAA...YOUR_PUBLIC_KEY..."
+
+db_name     = "expense_tracker"
+db_username = "n8n_user"
+db_password = "CHANGE_ME_strong_password_123!"
+
+# Your domain pointed to the EC2 elastic IP
+n8n_domain = "n8n.yourdomain.com"

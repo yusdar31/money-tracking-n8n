@@ -1,0 +1,118 @@
+###############################################################
+# .github/workflows/db-migrate.yml
+#
+# Auto-runs schema.sql changes when pushed to main.
+# Connects via SSH tunnel to EC2 → RDS (RDS stays private).
+#
+# Required GitHub Secrets:
+#   EC2_HOST            — EC2 public IP / hostname
+#   EC2_SSH_PRIVATE_KEY — PEM private key content
+#   DB_HOST             — RDS endpoint (private)
+#   DB_NAME             — expense_tracker
+#   DB_USER             — n8n_user
+#   DB_PASSWORD         — RDS password
+###############################################################
+
+name: "DB Migrate"
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "database/**"
+
+jobs:
+  migrate:
+    name: "Run SQL Migrations"
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2   # needed to detect changed files
+
+      - name: Detect Changed SQL Files
+        id: changes
+        run: |
+          CHANGED=$(git diff --name-only HEAD~1 HEAD -- 'database/*.sql' | tr '\n' ' ')
+          echo "files=$CHANGED" >> $GITHUB_OUTPUT
+          echo "Changed SQL files: $CHANGED"
+
+      - name: Skip if no SQL changes
+        if: steps.changes.outputs.files == ''
+        run: |
+          echo "No SQL files changed. Skipping migration."
+          exit 0
+
+      - name: Install PostgreSQL Client
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y postgresql-client
+
+      - name: Setup SSH Tunnel to RDS via EC2
+        env:
+          EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          EC2_HOST:            ${{ secrets.EC2_HOST }}
+          DB_HOST:             ${{ secrets.DB_HOST }}
+        run: |
+          # Write SSH private key
+          mkdir -p ~/.ssh
+          echo "$EC2_SSH_PRIVATE_KEY" > ~/.ssh/ec2_key.pem
+          chmod 600 ~/.ssh/ec2_key.pem
+
+          # Trust EC2 host key
+          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+
+          # Open SSH tunnel in background: localhost:5433 → RDS:5432
+          ssh -i ~/.ssh/ec2_key.pem \
+              -L 5433:${DB_HOST}:5432 \
+              -N -f \
+              -o ServerAliveInterval=30 \
+              ubuntu@"$EC2_HOST"
+
+          # Wait for tunnel to be ready
+          timeout 15 bash -c 'until nc -z localhost 5433; do sleep 1; done'
+          echo "SSH tunnel established: localhost:5433 → RDS"
+
+      - name: Run schema.sql Migration
+        env:
+          PGPASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          echo "=== Running database/schema.sql ==="
+          psql \
+            -h localhost \
+            -p 5433 \
+            -U "${{ secrets.DB_USER }}" \
+            -d "${{ secrets.DB_NAME }}" \
+            -v ON_ERROR_STOP=1 \
+            --single-transaction \
+            -f database/schema.sql
+
+          echo "✅ Migration complete"
+
+      - name: Verify Migration
+        env:
+          PGPASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          echo "=== Verifying tables and view ==="
+          psql \
+            -h localhost -p 5433 \
+            -U "${{ secrets.DB_USER }}" \
+            -d "${{ secrets.DB_NAME }}" \
+            -c "\dt" \
+            -c "\dv" \
+            -c "SELECT COUNT(*) AS budget_rows FROM monthly_budget;" \
+            --no-password
+
+      - name: Write Summary
+        if: always()
+        run: |
+          echo "## 🗄️ DB Migration Result" >> $GITHUB_STEP_SUMMARY
+          echo "- Files: \`${{ steps.changes.outputs.files }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Kill SSH Tunnel
+        if: always()
+        run: pkill -f "ssh.*5433" || true

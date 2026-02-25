@@ -1,0 +1,203 @@
+###############################################################
+# .github/workflows/terraform-cicd.yml
+#
+# Triggers:
+#   - Pull Request → terraform plan (as PR comment)
+#   - Push to main  → terraform apply (auto-deploy)
+#
+# Required GitHub Secrets:
+#   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+#   TF_VAR_my_ip_cidr, TF_VAR_ssh_public_key
+#   TF_VAR_db_password, TF_VAR_n8n_domain
+###############################################################
+
+name: "Terraform CI/CD"
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "terraform/**"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "terraform/**"
+
+permissions:
+  contents: read
+  pull-requests: write   # for PR comment
+
+env:
+  TF_VERSION: "1.7.0"
+  AWS_REGION: "ap-southeast-1"
+  TF_WORKING_DIR: "./terraform"
+
+jobs:
+  # ─────────────── VALIDATE (every PR & push) ──────────────────
+  validate:
+    name: "Validate"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init -backend=false   # no state needed for validate
+
+      - name: Terraform Format Check
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Validate
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform validate
+
+  # ─────────────── PLAN (on PR) ────────────────────────────────
+  plan:
+    name: "Terraform Plan"
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.event_name == 'pull_request'
+    environment: staging
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - name: Terraform Init (with S3 backend)
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="key=expense-tracker/terraform.tfstate" \
+            -backend-config="region=${{ env.AWS_REGION }}"
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          TF_VAR_my_ip_cidr:    ${{ secrets.TF_VAR_my_ip_cidr }}
+          TF_VAR_ssh_public_key: ${{ secrets.TF_VAR_ssh_public_key }}
+          TF_VAR_db_password:   ${{ secrets.TF_VAR_db_password }}
+          TF_VAR_n8n_domain:    ${{ secrets.TF_VAR_n8n_domain }}
+          TF_VAR_db_username:   ${{ secrets.TF_VAR_db_username }}
+        run: |
+          terraform plan -no-color -out=tfplan 2>&1 | tee plan_output.txt
+          echo "PLAN_EXIT_CODE=${PIPESTATUS[0]}" >> $GITHUB_ENV
+
+      - name: Post Plan as PR Comment
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('${{ env.TF_WORKING_DIR }}/plan_output.txt', 'utf8');
+            const maxLen = 65000;
+            const truncated = plan.length > maxLen
+              ? plan.slice(0, maxLen) + '\n\n... [output truncated]'
+              : plan;
+
+            const body = `## 🏗️ Terraform Plan
+
+            <details><summary>Show Plan</summary>
+
+            \`\`\`hcl
+            ${truncated}
+            \`\`\`
+
+            </details>
+
+            *Workflow: \`${{ github.workflow }}\` | Run: [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body
+            });
+
+      - name: Upload Plan Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: ${{ env.TF_WORKING_DIR }}/tfplan
+          retention-days: 3
+
+  # ─────────────── APPLY (on push to main) ─────────────────────
+  apply:
+    name: "Terraform Apply"
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production    # requires manual approval in GitHub env settings
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="key=expense-tracker/terraform.tfstate" \
+            -backend-config="region=${{ env.AWS_REGION }}"
+
+      - name: Terraform Apply
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        env:
+          TF_VAR_my_ip_cidr:     ${{ secrets.TF_VAR_my_ip_cidr }}
+          TF_VAR_ssh_public_key:  ${{ secrets.TF_VAR_ssh_public_key }}
+          TF_VAR_db_password:    ${{ secrets.TF_VAR_db_password }}
+          TF_VAR_n8n_domain:     ${{ secrets.TF_VAR_n8n_domain }}
+          TF_VAR_db_username:    ${{ secrets.TF_VAR_db_username }}
+        run: terraform apply -auto-approve
+
+      - name: Get Outputs → GitHub Step Summary
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          echo "## ✅ Deploy Successful" >> $GITHUB_STEP_SUMMARY
+          echo "| Output | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| EC2 Public IP | \`$(terraform output -raw ec2_public_ip)\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| n8n URL | $(terraform output -raw n8n_url) |" >> $GITHUB_STEP_SUMMARY
+          echo "| RDS Endpoint | \`$(terraform output -raw rds_endpoint)\` |" >> $GITHUB_STEP_SUMMARY
