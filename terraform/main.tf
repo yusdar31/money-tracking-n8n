@@ -186,6 +186,7 @@ resource "aws_instance" "n8n" {
   key_name               = aws_key_pair.main.key_name
   subnet_id              = aws_subnet.public.id
   vpc_security_group_ids = [aws_security_group.ec2_sg.id]
+  iam_instance_profile   = aws_iam_instance_profile.ssm_profile.name
 
   root_block_device {
     volume_type           = "gp3"
@@ -227,12 +228,12 @@ resource "aws_db_parameter_group" "postgres" {
 }
 
 resource "aws_db_instance" "postgres" {
-  identifier             = "${var.project_name}-db"
-  engine                 = "postgres"
-  engine_version         = "15.4"
-  instance_class         = "db.t3.micro"
-  allocated_storage      = 20 # Free Tier max
-  max_allocated_storage  = 20
+  identifier            = "${var.project_name}-db"
+  engine                = "postgres"
+  engine_version        = "15"
+  instance_class        = "db.t3.micro"
+  allocated_storage     = 20 # Free Tier max
+  max_allocated_storage = 20
 
   db_name  = var.db_name
   username = var.db_username
@@ -243,15 +244,43 @@ resource "aws_db_instance" "postgres" {
   parameter_group_name   = aws_db_parameter_group.postgres.name
 
   publicly_accessible     = false
-  deletion_protection     = false     # Set true in production
-  skip_final_snapshot     = true      # Set false in production
-  backup_retention_period = 7
-  backup_window           = "02:00-03:00"
-  maintenance_window      = "Mon:04:00-Mon:05:00"
+  deletion_protection     = false # Set true in production
+  skip_final_snapshot     = true  # Set false in production
+  backup_retention_period = 0     # Fixed for Free Tier accounts
+  # backup_window           = "02:00-03:00"
+  maintenance_window = "Mon:04:00-Mon:05:00"
 
   storage_encrypted = true
 
   tags = { Name = "${var.project_name}-postgres" }
+}
+
+##──── IAM ROLE FOR SSM (FOR PORT FORWARDING) ────────────────
+resource "aws_iam_role" "ssm_role" {
+  name = "${var.project_name}-ssm-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ssm_policy" {
+  role       = aws_iam_role.ssm_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_instance_profile" "ssm_profile" {
+  name = "${var.project_name}-ssm-profile"
+  role = aws_iam_role.ssm_role.name
 }
 
 ##──── OUTPUTS ────────────────────────────────────────────────

@@ -124,7 +124,144 @@ CADDY_EOF
 mkdir -p /var/log/caddy
 systemctl reload caddy || systemctl restart caddy
 
-echo "=== [6/6] Start n8n ==="
+echo "=== [6/7] Run DB Migrations ==="
+mkdir -p /opt/n8n/db_migrations
+cat > /opt/n8n/db_migrations/schema.sql << 'SQL_SCHEMA_EOF'
+-- Enable uuid-ossp extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- 1. Create TRANSACTIONS Table
+CREATE TABLE IF NOT EXISTS jago_transactions (
+    id                  UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tanggal_waktu       TIMESTAMPTZ NOT NULL,
+    tipe                VARCHAR(10) NOT NULL CHECK (tipe IN ('debit', 'kredit')),
+    nominal             NUMERIC(15, 2) NOT NULL CHECK (nominal > 0),
+    merchant_deskripsi  TEXT,
+    kategori_otomatis   VARCHAR(100),
+    email_subject       VARCHAR(255),
+    raw_body            TEXT,
+    created_at          TIMESTAMPTZ DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ DEFAULT NOW(),
+    -- Prevent exact duplicate transactions
+    CONSTRAINT unique_transaction UNIQUE (tanggal_waktu, nominal, merchant_deskripsi)
+);
+
+-- Index for searching descriptions and dates
+CREATE INDEX IF NOT EXISTS idx_transactions_merchant ON jago_transactions(merchant_deskripsi);
+CREATE INDEX IF NOT EXISTS idx_transactions_date ON jago_transactions(tanggal_waktu);
+
+-- 2. Create MONTHLY BUDGET Table
+CREATE TABLE IF NOT EXISTS monthly_budget (
+    id                  SERIAL      PRIMARY KEY,
+    bulan               DATE        NOT NULL UNIQUE, -- Store as 'YYYY-MM-01'
+    target_saving       NUMERIC(15, 2) NOT NULL DEFAULT 3000000,
+    total_pengeluaran   NUMERIC(15, 2) NOT NULL DEFAULT 0,
+    total_pemasukan     NUMERIC(15, 2) NOT NULL DEFAULT 0,
+    sisa_budget         NUMERIC(15, 2) GENERATED ALWAYS AS (total_pemasukan - total_pengeluaran - target_saving) STORED,
+    
+    pct_saving_risk     NUMERIC(5, 2) GENERATED ALWAYS AS (
+        CASE 
+            WHEN total_pemasukan = 0 THEN 0 
+            ELSE (total_pengeluaran / (total_pemasukan - target_saving)) * 100 
+        END
+    ) STORED,
+
+    created_at          TIMESTAMPTZ DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Index on the month for fast aggregation lookups
+CREATE INDEX IF NOT EXISTS idx_budget_bulan ON monthly_budget(bulan);
+
+-- 3. Auto update 'updated_at' functions
+CREATE OR REPLACE FUNCTION update_modified_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_update_jago_transactions ON jago_transactions;
+CREATE TRIGGER trg_update_jago_transactions
+    BEFORE UPDATE ON jago_transactions
+    FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+
+DROP TRIGGER IF EXISTS trg_update_monthly_budget ON monthly_budget;
+CREATE TRIGGER trg_update_monthly_budget
+    BEFORE UPDATE ON monthly_budget
+    FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+
+-- 4. Main Aggregation Trigger for Budget tracking
+CREATE OR REPLACE FUNCTION upsert_monthly_budget()
+RETURNS TRIGGER AS $$
+DECLARE
+    r_bulan DATE;
+    r_pengeluaran NUMERIC(15, 2) := 0;
+    r_pemasukan NUMERIC(15, 2) := 0;
+BEGIN
+    -- Determine which month is affected
+    IF TG_OP = 'DELETE' THEN
+        r_bulan := DATE_TRUNC('month', OLD.tanggal_waktu)::DATE;
+    ELSE
+        r_bulan := DATE_TRUNC('month', NEW.tanggal_waktu)::DATE;
+    END IF;
+
+    -- Calculate total pengeluaran (debit) and pemasukan (kredit) for that month
+    SELECT 
+        COALESCE(SUM(CASE WHEN tipe = 'debit' THEN nominal ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN tipe = 'kredit' THEN nominal ELSE 0 END), 0)
+    INTO 
+        r_pengeluaran, 
+        r_pemasukan
+    FROM jago_transactions
+    WHERE DATE_TRUNC('month', tanggal_waktu)::DATE = r_bulan;
+
+    -- Upsert the calculated totals into monthly_budget
+    INSERT INTO monthly_budget (bulan, total_pengeluaran, total_pemasukan)
+    VALUES (r_bulan, r_pengeluaran, r_pemasukan)
+    ON CONFLICT (bulan) 
+    DO UPDATE SET 
+        total_pengeluaran = r_pengeluaran,
+        total_pemasukan = r_pemasukan,
+        updated_at = NOW();
+
+    RETURN NULL; -- Because it's an AFTER trigger
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_update_monthly_budget ON jago_transactions;
+CREATE TRIGGER trg_update_monthly_budget
+    AFTER INSERT OR UPDATE OR DELETE ON jago_transactions
+    FOR EACH ROW EXECUTE FUNCTION upsert_monthly_budget();
+
+-- 5. Helper View for Looker Studio Dashboard
+CREATE OR REPLACE VIEW v_budget_dashboard AS
+SELECT 
+    bulan,
+    target_saving,
+    total_pengeluaran,
+    total_pemasukan,
+    sisa_budget,
+    pct_saving_risk,
+    CASE 
+        WHEN pct_saving_risk >= 100 THEN 'DANGER - Target Failed'
+        WHEN pct_saving_risk >= 80 THEN 'WARNING - Nearing Limit'
+        ELSE 'SAFE'
+    END AS budget_status,
+    updated_at
+FROM monthly_budget
+ORDER BY bulan DESC;
+SQL_SCHEMA_EOF
+
+# Run Docker container to execute migrations
+docker run --rm \
+  -v /opt/n8n/db_migrations/schema.sql:/app/schema.sql \
+  -e PGPASSWORD="${db_password}" \
+  postgres:15-alpine \
+  psql -h "${db_host}" -p 5432 -U "${db_user}" -d "${db_name}" -f /app/schema.sql
+
+echo "=== [7/7] Start n8n ==="
 cd /opt/n8n
 docker compose up -d
 
