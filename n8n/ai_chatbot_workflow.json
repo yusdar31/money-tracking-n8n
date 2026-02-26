@@ -1,0 +1,517 @@
+﻿{
+    "name": "AI Money Tracker Chatbot",
+    "nodes": [
+        {
+            "parameters": {
+                "updates": [
+                    "message"
+                ],
+                "additionalFields": {}
+            },
+            "id": "node-tg-trigger",
+            "name": "Telegram Message Trigger",
+            "type": "n8n-nodes-base.telegramTrigger",
+            "typeVersion": 1.1,
+            "position": [
+                240,
+                380
+            ],
+            "webhookId": "money-tracker-ai-bot",
+            "credentials": {
+                "telegramApi": {
+                    "id": "",
+                    "name": "Telegram account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "const msg = $input.first().json;\nconst text = (msg.message?.text || '').trim();\nconst chatId = msg.message?.chat?.id || '';\nconst from = msg.message?.from?.first_name || 'User';\n\n// Deteksi apakah ini slash command\nconst isCommand = text.startsWith('/');\nlet command = '';\nlet args = [];\n\nif (isCommand) {\n  const parts = text.split(' ');\n  command = parts[0].toLowerCase(); // e.g. /budget\n  args = parts.slice(1);            // e.g. ['4000000']\n}\n\nreturn [{ json: { userMessage: text, chatId, from, isCommand, command, args } }];"
+            },
+            "id": "node-extract-msg",
+            "name": "Extract Message",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                460,
+                380
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": false,
+                        "leftValue": "",
+                        "typeValidation": "loose"
+                    },
+                    "conditions": [
+                        {
+                            "id": "is-command",
+                            "leftValue": "={{ $json.isCommand }}",
+                            "rightValue": true,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "true"
+                            }
+                        }
+                    ]
+                }
+            },
+            "id": "node-if-command",
+            "name": "Is Command?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                680,
+                380
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Build SQL query & response for each command\nconst { command, args, chatId } = $input.first().json;\n\nlet sql = '';\nlet replyType = 'text'; // 'text' = static, 'query' = needs DB result\nlet staticReply = '';\nlet responseTemplate = '';\n\nswitch(command) {\n\n  case '/saldo':\n    sql = \"SELECT saldo_sekarang, updated_at FROM saldo_rekening ORDER BY id DESC LIMIT 1\";\n    responseTemplate = 'SALDO';\n    break;\n\n  case '/pengeluaran':\n    sql = `SELECT\n      TO_CHAR(bulan, 'Month YYYY') AS bulan_label,\n      total_pengeluaran,\n      total_pemasukan,\n      target_saving,\n      sisa_budget,\n      pct_saving_risk,\n      CASE\n        WHEN pct_saving_risk >= 100 THEN 'DANGER 🔴'\n        WHEN pct_saving_risk >= 80  THEN 'WARNING 🟡'\n        ELSE 'AMAN 🟢'\n      END AS status\n    FROM monthly_budget\n    WHERE bulan = DATE_TRUNC('month', NOW())::DATE`;\n    responseTemplate = 'PENGELUARAN';\n    break;\n\n  case '/export':\n    sql = `SELECT\n      TO_CHAR(tanggal_waktu AT TIME ZONE 'Asia/Jakarta', 'DD Mon HH24:MI') AS waktu,\n      tipe,\n      merchant_deskripsi AS merchant,\n      kategori_otomatis AS kategori,\n      nominal\n    FROM jago_transactions\n    WHERE DATE_TRUNC('month', tanggal_waktu) = DATE_TRUNC('month', NOW())\n    ORDER BY tanggal_waktu DESC\n    LIMIT 50`;\n    responseTemplate = 'EXPORT';\n    break;\n\n  case '/budget':\n    const newBudget = parseFloat(args[0]);\n    if (!newBudget || isNaN(newBudget)) {\n      replyType = 'text';\n      staticReply = '❌ Format salah. Gunakan: /budget <nominal>\\nContoh: /budget 4000000';\n    } else {\n      sql = `UPDATE monthly_budget SET target_saving = ${newBudget}, updated_at = NOW() WHERE bulan = DATE_TRUNC('month', NOW())::DATE`;\n      responseTemplate = `✅ Target saving bulan ini berhasil diubah menjadi *Rp ${newBudget.toLocaleString('id-ID')}*`;\n      replyType = 'update';\n    }\n    break;\n\n  case '/reset_saldo':\n    const newSaldo = parseFloat(args[0]);\n    if (!newSaldo || isNaN(newSaldo)) {\n      replyType = 'text';\n      staticReply = '❌ Format salah. Gunakan: /reset_saldo <nominal>\\nContoh: /reset_saldo 3500000';\n    } else {\n      sql = `UPDATE saldo_rekening SET saldo_sekarang = ${newSaldo}, updated_at = NOW(), keterangan = 'Reset manual' WHERE id = (SELECT id FROM saldo_rekening ORDER BY id DESC LIMIT 1)`;\n      responseTemplate = `✅ Saldo berhasil direset menjadi *Rp ${newSaldo.toLocaleString('id-ID')}*`;\n      replyType = 'update';\n    }\n    break;\n\n  case '/help':\n  default:\n    replyType = 'text';\n    staticReply = `💰 *Money Tracker Bot — Daftar Command*\n\n📊 *Info Keuangan*\n/saldo — Cek saldo rekening\n/pengeluaran — Ringkasan budget bulan ini\n/export — Rekapitulasi 50 transaksi terakhir\n\n⚙️ *Pengaturan*\n/budget <nominal> — Set target saving\nContoh: /budget 4000000\n\n/reset_saldo <nominal> — Reset saldo manual\nContoh: /reset_saldo 3500000\n\n🤖 *AI Chat* (gunakan bahasa natural)\nContoh: \"Berapa saldo saya?\"\nContoh: \"Tampilkan transaksi kemarin\"\\n\n/help — Tampilkan pesan ini`;\n    break;\n}\n\nreturn [{ json: { sql, replyType, staticReply, responseTemplate, chatId } }];"
+            },
+            "id": "node-build-cmd",
+            "name": "Build Command",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                900,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": false,
+                        "leftValue": "",
+                        "typeValidation": "loose"
+                    },
+                    "conditions": [
+                        {
+                            "id": "needs-db",
+                            "leftValue": "={{ $json.replyType }}",
+                            "rightValue": "text",
+                            "operator": {
+                                "type": "string",
+                                "operation": "notEquals"
+                            }
+                        }
+                    ]
+                }
+            },
+            "id": "node-if-needs-db",
+            "name": "Needs DB?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                1120,
+                200
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "={{ $json.sql }}",
+                "options": {}
+            },
+            "id": "node-exec-cmd-sql",
+            "name": "Execute Command SQL",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.4,
+            "position": [
+                1340,
+                120
+            ],
+            "credentials": {
+                "postgres": {
+                    "id": "",
+                    "name": "Postgres account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "const rows = $input.all().map(i => i.json);\nconst chatId = $('Build Command').first().json.chatId;\nconst template = $('Build Command').first().json.responseTemplate;\nconst replyType = $('Build Command').first().json.replyType;\n\nconst rp = (n) => {\n  const num = parseFloat(String(n).replace(/[^0-9.-]/g, ''));\n  return isNaN(num) ? n : 'Rp ' + num.toLocaleString('id-ID');\n};\n\nlet finalMessage = '';\n\nif (replyType === 'update') {\n  finalMessage = template;\n\n} else if (template === 'SALDO') {\n  const r = rows[0] || {};\n  const updatedAt = r.updated_at ? new Date(r.updated_at).toLocaleString('id-ID', {timeZone:'Asia/Jakarta'}) : '-';\n  finalMessage = `💰 *Saldo Rekening*\\n${rp(r.saldo_sekarang)}\\n\\n🕐 Terakhir update: ${updatedAt}`;\n\n} else if (template === 'PENGELUARAN') {\n  if (rows.length === 0) {\n    finalMessage = '📭 Belum ada data budget bulan ini.';\n  } else {\n    const r = rows[0];\n    finalMessage = `📊 *Budget ${r.bulan_label}*\\n\\n` +\n      `💸 Pengeluaran: ${rp(r.total_pengeluaran)}\\n` +\n      `💵 Pemasukan: ${rp(r.total_pemasukan)}\\n` +\n      `🎯 Target Saving: ${rp(r.target_saving)}\\n` +\n      `🏦 Sisa Budget: ${rp(r.sisa_budget)}\\n` +\n      `📈 Risiko: ${r.pct_saving_risk}%\\n\\n` +\n      `Status: ${r.status}`;\n  }\n\n} else if (template === 'EXPORT') {\n  if (rows.length === 0) {\n    finalMessage = '📭 Tidak ada transaksi bulan ini.';\n  } else {\n    const totalDebit = rows.filter(r => r.tipe === 'debit').reduce((s, r) => s + parseFloat(r.nominal), 0);\n    const totalKredit = rows.filter(r => r.tipe === 'kredit').reduce((s, r) => s + parseFloat(r.nominal), 0);\n    const lines = rows.map(r =>\n      `• ${r.waktu}\\n  ${r.merchant || 'Unknown'} | ${r.tipe} | ${rp(r.nominal)}`\n    );\n    finalMessage = `📋 *Rekapitulasi Bulan Ini* (${rows.length} transaksi)\\n` +\n      `💸 Total Keluar: ${rp(totalDebit)}\\n` +\n      `💵 Total Masuk: ${rp(totalKredit)}\\n\\n` +\n      lines.join('\\n');\n    // Batasi panjang pesan Telegram (maks 4096 karakter)\n    if (finalMessage.length > 4000) {\n      finalMessage = finalMessage.slice(0, 3900) + '\\n...\\n_(Dipotong, tampilkan hanya yang muat)_';\n    }\n  }\n}\n\nreturn [{ json: { finalMessage, chatId } }];"
+            },
+            "id": "node-format-cmd",
+            "name": "Format Command Reply",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1560,
+                120
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const item = $input.first().json;\nreturn [{ json: { finalMessage: item.staticReply, chatId: item.chatId } }];"
+            },
+            "id": "node-static-reply",
+            "name": "Static Reply",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1340,
+                280
+            ]
+        },
+        {
+            "parameters": {
+                "chatId": "={{ $json.chatId }}",
+                "text": "={{ $json.finalMessage }}",
+                "additionalFields": {
+                    "parse_mode": "Markdown"
+                }
+            },
+            "id": "node-tg-reply-cmd",
+            "name": "Telegram Reply (Command)",
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.2,
+            "position": [
+                1780,
+                200
+            ],
+            "credentials": {
+                "telegramApi": {
+                    "id": "",
+                    "name": "Telegram account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={{ $env.GEMINI_API_KEY }}",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "contentType": "raw",
+                "rawContentType": "application/json",
+                "body": "={\"contents\":[{\"parts\":[{\"text\":\"Kamu adalah asisten keuangan Money Tracker AI untuk Bank Jago.\\n\\nStruktur database PostgreSQL:\\n- jago_transactions: id, tanggal_waktu, tipe (debit/kredit/transfer_pocket), nominal, merchant_deskripsi, kategori_otomatis, saldo_akhir\\n- monthly_budget: bulan, target_saving, total_pengeluaran, total_pemasukan, sisa_budget, pct_saving_risk\\n- saldo_rekening: id, saldo_sekarang, updated_at\\n\\nPerintah pengguna: {{ $json.userMessage }}\\n\\nBerikan HANYA respons JSON berikut (tanpa markdown, tanpa komentar):\\n{\\\"action\\\":\\\"query atau update atau info\\\",\\\"sql\\\":\\\"SQL query PostgreSQL jika perlu, atau string kosong\\\",\\\"responseTemplate\\\":\\\"Pesan Bahasa Indonesia dengan emoji. Jika butuh data DB tulis {DATA} sebagai placeholder\\\",\\\"message\\\":\\\"Jika action=info isi pesan di sini, jika tidak biarkan kosong\\\"}\\n\\nAturan:\\n- action=query: untuk membaca data (SELECT)\\n- action=update: untuk mengubah data (UPDATE/INSERT/DELETE)\\n- action=info: untuk percakapan biasa tanpa perlu DB\\n- Untuk bulan ini gunakan: DATE_TRUNC('month', NOW())::DATE\\n- responseTemplate diisi selalu kecuali action=info\\n\\nContoh 1 (saldo): {\\\"action\\\":\\\"query\\\",\\\"sql\\\":\\\"SELECT saldo_sekarang FROM saldo_rekening ORDER BY id DESC LIMIT 1\\\",\\\"responseTemplate\\\":\\\"💰 Saldo rekening kamu: {DATA}\\\",\\\"message\\\":\\\"\\\"}\\nContoh 2 (budget): {\\\"action\\\":\\\"query\\\",\\\"sql\\\":\\\"SELECT total_pengeluaran, total_pemasukan, target_saving, sisa_budget FROM monthly_budget WHERE bulan = DATE_TRUNC('month', NOW())::DATE\\\",\\\"responseTemplate\\\":\\\"📊 Budget bulan ini:\\\\n{DATA}\\\",\\\"message\\\":\\\"\\\"}\\nContoh 3 (ubah saving): {\\\"action\\\":\\\"update\\\",\\\"sql\\\":\\\"UPDATE monthly_budget SET target_saving = 4000000 WHERE bulan = DATE_TRUNC('month', NOW())::DATE\\\",\\\"responseTemplate\\\":\\\"✅ Target saving berhasil diubah menjadi Rp 4.000.000!\\\",\\\"message\\\":\\\"\\\"}\\nContoh 4 (sapa): {\\\"action\\\":\\\"info\\\",\\\"sql\\\":\\\"\\\",\\\"responseTemplate\\\":\\\"\\\",\\\"message\\\":\\\"Halo! Saya Money Tracker AI 👋 Ada yang bisa saya bantu?\\\"}\\n\\nINGAT: HANYA output JSON, tidak ada teks lain sama sekali!\"}]}]}",
+                "options": {}
+            },
+            "id": "node-gemini-parse",
+            "name": "Gemini: Parse Intent",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                900,
+                560
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const response = $input.first().json;\nconst rawText = response.candidates?.[0]?.content?.parts?.[0]?.text || '{}';\nconst cleaned = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();\n\nlet parsed;\ntry {\n  parsed = JSON.parse(cleaned);\n} catch(e) {\n  parsed = {\n    action: 'info',\n    sql: '',\n    responseTemplate: '',\n    message: 'Maaf, saya tidak mengerti. Ketik /help untuk melihat daftar command yang tersedia.'\n  };\n}\n\nconst chatId = $('Extract Message').first().json.chatId;\nconst hasSql = parsed.action === 'query' || parsed.action === 'update';\nreturn [{ json: { ...parsed, chatId, hasSql } }];"
+            },
+            "id": "node-parse-response",
+            "name": "Parse Gemini Response",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1120,
+                560
+            ]
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": false,
+                        "leftValue": "",
+                        "typeValidation": "loose"
+                    },
+                    "conditions": [
+                        {
+                            "id": "has-sql",
+                            "leftValue": "={{ $json.hasSql }}",
+                            "rightValue": true,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "true"
+                            }
+                        }
+                    ]
+                }
+            },
+            "id": "node-if-sql",
+            "name": "Has SQL?",
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2,
+            "position": [
+                1340,
+                560
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "={{ $json.sql }}",
+                "options": {}
+            },
+            "id": "node-postgres-exec",
+            "name": "Execute SQL",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.4,
+            "position": [
+                1560,
+                460
+            ],
+            "credentials": {
+                "postgres": {
+                    "id": "",
+                    "name": "Postgres account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "const rows = $input.all().map(i => i.json);\nconst chatId = $('Parse Gemini Response').first().json.chatId;\nconst template = $('Parse Gemini Response').first().json.responseTemplate || '✅ Selesai!';\n\nconst rp = (n) => {\n  const num = parseFloat(String(n).replace(/[^0-9.-]/g, ''));\n  return isNaN(num) ? n : 'Rp ' + num.toLocaleString('id-ID');\n};\n\nconst uangFields = ['nominal', 'saldo_sekarang', 'saldo_akhir', 'total_pengeluaran',\n  'total_pemasukan', 'target_saving', 'sisa_budget'];\n\nlet dataText = '';\nif (rows.length === 0) {\n  dataText = '(tidak ada data)';\n} else if (rows.length === 1) {\n  const r = rows[0];\n  dataText = Object.entries(r)\n    .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${uangFields.includes(k) ? rp(v) : v}`)\n    .join('\\n');\n} else {\n  dataText = rows.map((r, i) => {\n    const vals = Object.entries(r).map(([k, v]) => uangFields.includes(k) ? rp(v) : v);\n    return `${i + 1}. ${vals.join(' | ')}`;\n  }).join('\\n');\n}\n\nconst finalMessage = template.replace('{DATA}', dataText);\nreturn [{ json: { finalMessage, chatId } }];"
+            },
+            "id": "node-format-result",
+            "name": "Format SQL Result",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1780,
+                460
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const item = $input.first().json;\nreturn [{ json: { finalMessage: item.message, chatId: item.chatId } }];"
+            },
+            "id": "node-direct-reply",
+            "name": "Direct Reply",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1560,
+                660
+            ]
+        },
+        {
+            "parameters": {
+                "chatId": "={{ $json.chatId }}",
+                "text": "={{ $json.finalMessage }}",
+                "additionalFields": {
+                    "parse_mode": "Markdown"
+                }
+            },
+            "id": "node-tg-reply-sql",
+            "name": "Telegram Reply (AI)",
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.2,
+            "position": [
+                2000,
+                560
+            ],
+            "credentials": {
+                "telegramApi": {
+                    "id": "",
+                    "name": "Telegram account"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Telegram Message Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Extract Message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Extract Message": {
+            "main": [
+                [
+                    {
+                        "node": "Is Command?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Is Command?": {
+            "main": [
+                [
+                    {
+                        "node": "Build Command",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Gemini: Parse Intent",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Build Command": {
+            "main": [
+                [
+                    {
+                        "node": "Needs DB?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Needs DB?": {
+            "main": [
+                [
+                    {
+                        "node": "Execute Command SQL",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Static Reply",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Execute Command SQL": {
+            "main": [
+                [
+                    {
+                        "node": "Format Command Reply",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Format Command Reply": {
+            "main": [
+                [
+                    {
+                        "node": "Telegram Reply (Command)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Static Reply": {
+            "main": [
+                [
+                    {
+                        "node": "Telegram Reply (Command)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Gemini: Parse Intent": {
+            "main": [
+                [
+                    {
+                        "node": "Parse Gemini Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Parse Gemini Response": {
+            "main": [
+                [
+                    {
+                        "node": "Has SQL?",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Has SQL?": {
+            "main": [
+                [
+                    {
+                        "node": "Execute SQL",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Direct Reply",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Execute SQL": {
+            "main": [
+                [
+                    {
+                        "node": "Format SQL Result",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Format SQL Result": {
+            "main": [
+                [
+                    {
+                        "node": "Telegram Reply (AI)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Direct Reply": {
+            "main": [
+                [
+                    {
+                        "node": "Telegram Reply (AI)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "saveManualExecutions": true,
+        "callerPolicy": "workflowsFromSameOwner"
+    },
+    "staticData": null,
+    "meta": {
+        "templateCredsSetupCompleted": false
+    },
+    "tags": [
+        {
+            "name": "expense-tracker",
+            "createdAt": "2026-02-26"
+        }
+    ]
+}
