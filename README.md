@@ -132,7 +132,7 @@ money-tracking/
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/<username>/money-tracking.git
+git clone https://github.com/yusdar31/money-tracking.git
 cd money-tracking
 ```
 
