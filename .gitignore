@@ -12,6 +12,22 @@ terraform/terraform.tfstate.backup
 # n8n local data
 n8n/data/
 
+# Backend
+backend/node_modules/
+backend/.env
+backend/dist/
+
+# Frontend
+frontend/node_modules/
+frontend/.env
+frontend/.env.local
+frontend/.next/
+frontend/out/
+
+# Docker env
+.env
+*.env.local
+
 # OS
 .DS_Store
 Thumbs.db

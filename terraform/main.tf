@@ -224,6 +224,12 @@ resource "aws_db_parameter_group" "postgres" {
     value = "1"
   }
 
+  parameter {
+    name         = "rds.force_ssl"
+    value        = "0"
+    apply_method = "pending-reboot"
+  }
+
   tags = { Name = "${var.project_name}-pg-params" }
 }
 

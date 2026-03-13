@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#3c83f6",
+                        "background-light": "#f5f7f8",
+                        "background-dark": "#0f172a",
+                        "card-dark": "#1e293b",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-nav {
+            background-color: rgba(60, 131, 246, 0.1);
+            border-left: 4px solid #3c83f6;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display min-h-screen">
+<div class="flex">
+<!-- Sidebar -->
+<aside class="fixed top-0 left-0 h-screen w-[240px] bg-white dark:bg-card-dark border-r border-slate-200 dark:border-slate-800 z-50">
+<div class="flex flex-col h-full">
+<!-- Logo -->
+<div class="p-6 flex items-center gap-3">
+<span class="text-2xl">💰</span>
+<h1 class="text-lg font-bold tracking-tight text-slate-900 dark:text-white">Money Tracker</h1>
+</div>
+<!-- Navigation -->
+<nav class="flex-1 px-4 space-y-2 mt-4">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg active-nav text-primary" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-sm font-semibold">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined">payments</span>
+<span class="text-sm font-medium">Transaksi</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="text-sm font-medium">Budget</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" href="#">
+<span class="material-symbols-outlined">sell</span>
+<span class="text-sm font-medium">Kategori</span>
+</a>
+</nav>
+<!-- Profile/Footer -->
+<div class="p-4 border-t border-slate-200 dark:border-slate-800">
+<div class="flex items-center gap-3 p-2">
+<div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="User profile avatar icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuABes07vi8V8xmP8vRqsm_9t1h5C0eSs0AE0TflT_rQ5JoPkvPmCGKkNYGlC0vU8VSRp9s7AiaG9prVlKf_3lmf61BUBbMPws_Z3mhOLFmZ6W6MEhX05ieIYFuDgZYVhbRjjlDb-erQjOCVIijUriM0J9g0oQMGWhryrRyyRBDXkDVmRVU9AuYFeuRD0yJFa7AZ_04VSgOIwObCfB9DAiro1pQglMtPnM9eHqgqzAOu_huq71mfajRsdZJIDE8JNA4TeC0Knfm7WToE"/>
+</div>
+<div class="flex flex-col">
+<p class="text-sm font-semibold">Bank Jago</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">Account Main</p>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 ml-[240px] p-8">
+<!-- Header -->
+<header class="flex justify-between items-center mb-8">
+<div>
+<h2 class="text-2xl font-bold text-slate-900 dark:text-white">Dashboard Overview</h2>
+<p class="text-slate-500 dark:text-slate-400 text-sm">Welcome back, here's your spending summary.</p>
+</div>
+<div class="flex gap-4">
+<button class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-sm">add</span>
+                        Tambah Transaksi
+                    </button>
+</div>
+</header>
+<!-- Stat Cards Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+<div class="bg-white dark:bg-card-dark p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Total Saldo</p>
+<p class="text-2xl font-bold text-slate-900 dark:text-white">Rp 5.250.000</p>
+<div class="mt-4 flex items-center text-emerald-500 text-xs font-medium">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+<span class="ml-1">+2.4% vs bulan lalu</span>
+</div>
+</div>
+<div class="bg-white dark:bg-card-dark p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Total Pengeluaran</p>
+<p class="text-2xl font-bold text-slate-900 dark:text-white">Rp 1.800.000</p>
+<div class="mt-4 flex items-center text-rose-500 text-xs font-medium">
+<span class="material-symbols-outlined text-sm">trending_down</span>
+<span class="ml-1">+12% dari target</span>
+</div>
+</div>
+<div class="bg-white dark:bg-card-dark p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Total Pemasukan</p>
+<p class="text-2xl font-bold text-slate-900 dark:text-white">Rp 7.050.000</p>
+<div class="mt-4 flex items-center text-emerald-500 text-xs font-medium">
+<span class="material-symbols-outlined text-sm">payments</span>
+<span class="ml-1">Gaji &amp; Side-hustle</span>
+</div>
+</div>
+<div class="bg-white dark:bg-card-dark p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm border-l-4 border-l-primary">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">Sisa Budget</p>
+<p class="text-2xl font-bold text-slate-900 dark:text-white">Rp 3.450.000</p>
+<div class="mt-4 flex items-center text-primary text-xs font-medium">
+<span class="material-symbols-outlined text-sm">info</span>
+<span class="ml-1">Aman untuk 15 hari ke depan</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Recent Transactions -->
+<div class="lg:col-span-2">
+<div class="bg-white dark:bg-card-dark rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+<div class="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+<h3 class="font-bold text-lg">Transaksi Terbaru</h3>
+<button class="text-primary text-sm font-semibold hover:underline">Lihat Semua</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-wider">
+<th class="px-6 py-4">Nama Transaksi</th>
+<th class="px-6 py-4">Kategori</th>
+<th class="px-6 py-4">Tanggal</th>
+<th class="px-6 py-4 text-right">Jumlah</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600">
+<span class="material-symbols-outlined text-sm">movie</span>
+</div>
+<span class="text-sm font-medium">Netflix Subscription</span>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">Hiburan</td>
+<td class="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">22 Okt 2023</td>
+<td class="px-6 py-4 text-sm font-bold text-rose-500 text-right">- Rp 186.000</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600">
+<span class="material-symbols-outlined text-sm">restaurant</span>
+</div>
+<span class="text-sm font-medium">Gofood Lunch</span>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">Makanan</td>
+<td class="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">21 Okt 2023</td>
+<td class="px-6 py-4 text-sm font-bold text-rose-500 text-right">- Rp 75.000</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600">
+<span class="material-symbols-outlined text-sm">work</span>
+</div>
+<span class="text-sm font-medium">Monthly Salary</span>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">Pendapatan</td>
+<td class="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">20 Okt 2023</td>
+<td class="px-6 py-4 text-sm font-bold text-emerald-500 text-right">+ Rp 7.050.000</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600">
+<span class="material-symbols-outlined text-sm">shopping_cart</span>
+</div>
+<span class="text-sm font-medium">Tokopedia Shopping</span>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">Belanja</td>
+<td class="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">19 Okt 2023</td>
+<td class="px-6 py-4 text-sm font-bold text-rose-500 text-right">- Rp 542.000</td>
+</tr>
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600">
+<span class="material-symbols-outlined text-sm">bolt</span>
+</div>
+<span class="text-sm font-medium">Tagihan PLN</span>
+</div>
+</td>
+<td class="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">Utilitas</td>
+<td class="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">18 Okt 2023</td>
+<td class="px-6 py-4 text-sm font-bold text-rose-500 text-right">- Rp 450.000</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Budget Risk Card -->
+<div class="flex flex-col gap-6">
+<div class="bg-white dark:bg-card-dark rounded-xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm">
+<div class="flex items-center justify-between mb-6">
+<h3 class="font-bold text-lg">Budget Bulanan</h3>
+<span class="px-2 py-1 rounded text-[10px] font-bold uppercase bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Warning</span>
+</div>
+<div class="relative h-48 mb-6 flex items-center justify-center">
+<!-- Semi-circular progress representation -->
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="text-center">
+<p class="text-4xl font-black text-slate-900 dark:text-white">75%</p>
+<p class="text-xs text-slate-500 dark:text-slate-400 uppercase font-bold tracking-tighter">Terpakai</p>
+</div>
+</div>
+<svg class="w-40 h-40 transform -rotate-90">
+<circle class="text-slate-100 dark:text-slate-800" cx="80" cy="80" fill="transparent" r="70" stroke="currentColor" stroke-width="12"></circle>
+<circle class="text-amber-500" cx="80" cy="80" fill="transparent" r="70" stroke="currentColor" stroke-dasharray="440" stroke-dashoffset="110" stroke-width="12"></circle>
+</svg>
+</div>
+<div class="space-y-4">
+<div class="flex justify-between items-end">
+<div>
+<p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Budget Terpakai</p>
+<p class="text-lg font-bold">Rp 10.350.000</p>
+</div>
+<div class="text-right">
+<p class="text-xs text-slate-500 dark:text-slate-400 font-medium">Limit Total</p>
+<p class="text-sm font-semibold text-slate-400 italic">Rp 13.800.000</p>
+</div>
+</div>
+<div class="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 flex gap-3">
+<span class="material-symbols-outlined text-amber-600 dark:text-amber-500">warning</span>
+<div>
+<p class="text-sm font-bold text-amber-900 dark:text-amber-400 leading-tight">Waspada Pengeluaran!</p>
+<p class="text-xs text-amber-800 dark:text-amber-500/80 mt-1">Anda telah menggunakan 75% dari budget bulanan. Masih ada 10 hari tersisa.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Category Usage Hint -->
+<div class="bg-primary/5 dark:bg-primary/10 rounded-xl border border-primary/10 p-6 flex items-start gap-4">
+<div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary">tips_and_updates</span>
+</div>
+<div>
+<p class="text-sm font-bold text-primary">Tips Hemat</p>
+<p class="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">Pengeluaran hiburan Anda 15% lebih tinggi dari rata-rata. Coba kurangi langganan yang tidak terpakai.</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

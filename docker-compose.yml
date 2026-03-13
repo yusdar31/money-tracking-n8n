@@ -1,0 +1,86 @@
+services:
+  # ── n8n Automation ─────────────────────────────────────────────────────
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    restart: unless-stopped
+    environment:
+      - N8N_HOST=${N8N_DOMAIN}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=https://${N8N_DOMAIN}/
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=${DB_HOST}
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${DB_NAME}
+      - DB_POSTGRESDB_USER=${DB_USER}
+      - DB_POSTGRESDB_PASSWORD=${DB_PASSWORD}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - app_network
+
+  # ── Backend REST API ────────────────────────────────────────────────────
+  backend:
+    image: ghcr.io/${GITHUB_REPO}/money-tracking-backend:${IMAGE_TAG:-latest}
+    container_name: backend
+    restart: unless-stopped
+    environment:
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_SSL=false
+      - PORT=3001
+      - FRONTEND_URL=https://${APP_DOMAIN}
+    networks:
+      - app_network
+    depends_on:
+      - n8n
+
+  # ── Frontend Next.js ────────────────────────────────────────────────────
+  frontend:
+    image: ghcr.io/${GITHUB_REPO}/money-tracking-frontend:${IMAGE_TAG:-latest}
+    container_name: frontend
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_API_URL=https://${APP_DOMAIN}/api
+      - NODE_ENV=production
+    networks:
+      - app_network
+    depends_on:
+      - backend
+
+  # ── Caddy Reverse Proxy ─────────────────────────────────────────────────
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - app_network
+    depends_on:
+      - n8n
+      - backend
+      - frontend
+
+networks:
+  app_network:
+    driver: bridge
+
+volumes:
+  n8n_data:
+  caddy_data:
+  caddy_config:

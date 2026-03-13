@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Bank Jago - Riwayat Transaksi</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#3c83f6",
+                        "background-light": "#f5f7f8",
+                        "background-dark": "#101722",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen">
+<div class="flex h-screen overflow-hidden">
+<!-- Sidebar -->
+<aside class="w-64 flex flex-col bg-slate-50 dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800">
+<div class="p-6 flex flex-col h-full">
+<!-- Profile Section -->
+<div class="flex items-center gap-3 mb-8">
+<div class="size-10 rounded-full bg-primary flex items-center justify-center text-white" data-alt="User profile avatar icon">
+<span class="material-symbols-outlined">person</span>
+</div>
+<div class="flex flex-col">
+<h1 class="text-base font-bold dark:text-slate-100">Bank Jago</h1>
+<p class="text-slate-500 dark:text-slate-400 text-xs">Premium Member</p>
+</div>
+</div>
+<!-- Navigation -->
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-sm font-medium">Beranda</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="text-sm font-medium">Kantong</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 bg-primary/10 text-primary rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="text-sm font-medium">Riwayat</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">pie_chart</span>
+<span class="text-sm font-medium">Analisis</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">contacts</span>
+<span class="text-sm font-medium">Kontak</span>
+</a>
+</nav>
+<!-- Footer Sidebar -->
+<div class="mt-auto pt-6 border-t border-slate-200 dark:border-slate-800">
+<button class="w-full py-2.5 px-4 bg-primary hover:bg-primary/90 text-white text-sm font-bold rounded-lg transition-all shadow-lg shadow-primary/20">
+                        Upgrade ke Jago Plus
+                    </button>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col overflow-y-auto">
+<div class="p-8 max-w-6xl w-full mx-auto">
+<!-- Header -->
+<div class="mb-8">
+<h2 class="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Riwayat Transaksi</h2>
+<p class="text-slate-500 dark:text-slate-400 mt-1">Pantau semua pemasukan dan pengeluaran Anda</p>
+</div>
+<!-- Filters -->
+<div class="flex flex-wrap items-center gap-3 mb-6 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+<div class="flex items-center gap-2">
+<label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Periode</label>
+<button class="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium">
+<span class="material-symbols-outlined text-sm">calendar_month</span>
+                            Oktober 2023
+                            <span class="material-symbols-outlined text-sm">expand_more</span>
+</button>
+</div>
+<div class="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-2"></div>
+<div class="flex items-center gap-2">
+<label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Tipe</label>
+<div class="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-lg">
+<button class="px-4 py-1 rounded-md text-sm font-medium bg-white dark:bg-slate-700 shadow-sm">Semua</button>
+<button class="px-4 py-1 rounded-md text-sm font-medium text-slate-500 hover:text-slate-900 dark:hover:text-slate-200">Debit</button>
+<button class="px-4 py-1 rounded-md text-sm font-medium text-slate-500 hover:text-slate-900 dark:hover:text-slate-200">Kredit</button>
+</div>
+</div>
+<div class="flex-1"></div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+<input class="pl-10 pr-4 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary outline-none w-64" placeholder="Cari transaksi..." type="text"/>
+</div>
+</div>
+<!-- Data Table -->
+<div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-50 dark:bg-slate-800/50 border-bottom border-slate-200 dark:border-slate-800">
+<th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Tanggal</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Merchant / Keterangan</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Kategori</th>
+<th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Tipe</th>
+<th class="px-6 py-4 text-right text-xs font-bold text-slate-400 uppercase tracking-wider">Nominal</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+<!-- Row 1 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-5 text-sm font-medium text-slate-500 dark:text-slate-400">24 Okt 2023</td>
+<td class="px-6 py-5 text-sm font-bold text-slate-900 dark:text-slate-100">Tokopedia</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full text-xs font-semibold">Belanja</span>
+</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full text-xs font-bold uppercase tracking-tight">Debit</span>
+</td>
+<td class="px-6 py-5 text-right font-bold text-red-600 dark:text-red-400">- Rp 250.000</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-5 text-sm font-medium text-slate-500 dark:text-slate-400">23 Okt 2023</td>
+<td class="px-6 py-5 text-sm font-bold text-slate-900 dark:text-slate-100">Transfer Masuk (Gaji)</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full text-xs font-semibold">Gaji</span>
+</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full text-xs font-bold uppercase tracking-tight">Kredit</span>
+</td>
+<td class="px-6 py-5 text-right font-bold text-emerald-600 dark:text-emerald-400">+ Rp 5.000.000</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-5 text-sm font-medium text-slate-500 dark:text-slate-400">22 Okt 2023</td>
+<td class="px-6 py-5 text-sm font-bold text-slate-900 dark:text-slate-100">Grab Ride</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full text-xs font-semibold">Transportasi</span>
+</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full text-xs font-bold uppercase tracking-tight">Debit</span>
+</td>
+<td class="px-6 py-5 text-right font-bold text-red-600 dark:text-red-400">- Rp 45.000</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-5 text-sm font-medium text-slate-500 dark:text-slate-400">22 Okt 2023</td>
+<td class="px-6 py-5 text-sm font-bold text-slate-900 dark:text-slate-100">Starbucks Reserve</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full text-xs font-semibold">Makanan &amp; Minuman</span>
+</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full text-xs font-bold uppercase tracking-tight">Debit</span>
+</td>
+<td class="px-6 py-5 text-right font-bold text-red-600 dark:text-red-400">- Rp 60.000</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+<td class="px-6 py-5 text-sm font-medium text-slate-500 dark:text-slate-400">20 Okt 2023</td>
+<td class="px-6 py-5 text-sm font-bold text-slate-900 dark:text-slate-100">Netflix Subscription</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full text-xs font-semibold">Hiburan</span>
+</td>
+<td class="px-6 py-5">
+<span class="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full text-xs font-bold uppercase tracking-tight">Debit</span>
+</td>
+<td class="px-6 py-5 text-right font-bold text-red-600 dark:text-red-400">- Rp 186.000</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="mt-8 flex items-center justify-between">
+<p class="text-sm text-slate-500 dark:text-slate-400">Menampilkan <span class="font-bold text-slate-900 dark:text-slate-100">5</span> dari <span class="font-bold text-slate-900 dark:text-slate-100">42</span> transaksi</p>
+<div class="flex items-center gap-1">
+<button class="size-9 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400">
+<span class="material-symbols-outlined text-lg">chevron_left</span>
+</button>
+<button class="size-9 flex items-center justify-center rounded-lg bg-primary text-white font-bold">1</button>
+<button class="size-9 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400">2</button>
+<button class="size-9 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400">3</button>
+<span class="px-2 text-slate-400">...</span>
+<button class="size-9 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400">8</button>
+<button class="size-9 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400">
+<span class="material-symbols-outlined text-lg">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

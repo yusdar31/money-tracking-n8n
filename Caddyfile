@@ -1,0 +1,28 @@
+# Caddyfile — Reverse Proxy untuk semua services
+
+# ── Aplikasi Dashboard (Frontend + Backend API) ──────────────────────────
+{$APP_DOMAIN} {
+  # Backend API
+  handle /api/* {
+    reverse_proxy backend:3001
+  }
+
+  # Frontend Next.js (catch-all)
+  handle {
+    reverse_proxy frontend:3000
+  }
+
+  # TLS otomatis via Let's Encrypt
+  tls {
+    dns duckdns {$DUCKDNS_TOKEN}
+  }
+}
+
+# ── n8n Automation UI ────────────────────────────────────────────────────
+{$N8N_DOMAIN} {
+  reverse_proxy n8n:5678
+
+  tls {
+    dns duckdns {$DUCKDNS_TOKEN}
+  }
+}
