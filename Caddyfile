@@ -12,17 +12,12 @@
     reverse_proxy frontend:3000
   }
 
-  # TLS otomatis via Let's Encrypt
-  tls {
-    dns duckdns {$DUCKDNS_TOKEN}
-  }
+
 }
 
 # ── n8n Automation UI ────────────────────────────────────────────────────
 {$N8N_DOMAIN} {
   reverse_proxy n8n:5678
 
-  tls {
-    dns duckdns {$DUCKDNS_TOKEN}
-  }
+
 }
