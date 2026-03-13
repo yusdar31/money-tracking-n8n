@@ -12,8 +12,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/money-tracking-backend
-  FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/money-tracking-frontend
+  BACKEND_IMAGE: ghcr.io/${{ github.repository }}/money-tracking-backend
+  FRONTEND_IMAGE: ghcr.io/${{ github.repository }}/money-tracking-frontend
 
 jobs:
   # ── Build & Push Docker Images ─────────────────────────────────────────
