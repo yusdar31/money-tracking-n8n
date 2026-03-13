@@ -83,12 +83,9 @@ jobs:
             mkdir -p ~/money-tracking
             cd ~/money-tracking
 
-            # Jika belum ada file docker-compose, tarik mentah-mentah dari repo
-            if [ ! -f "docker-compose.yml" ]; then
-              echo "Downloading compose files..."
-              wget -qO docker-compose.yml https://raw.githubusercontent.com/${{ github.repository }}/main/docker-compose.yml
-              wget -qO Caddyfile https://raw.githubusercontent.com/${{ github.repository }}/main/Caddyfile
-            fi
+            # Selalu unduh file konfigurasi compose yang selaras dengan commit terpusat!
+            curl -sL -o docker-compose.yml "https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/docker-compose.yml"
+            curl -sL -o Caddyfile "https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/Caddyfile"
 
             # Login ke GitHub Container Registry
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
