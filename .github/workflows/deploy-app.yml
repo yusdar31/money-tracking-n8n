@@ -87,8 +87,8 @@ jobs:
             curl -sL -o docker-compose.yml "https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/docker-compose.yml"
             curl -sL -o Caddyfile "https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/Caddyfile"
 
-            # Login ke GitHub Container Registry
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
+            # Login ke GitHub Container Registry dengan hak SUDO agar compose bisa mengakses session kredensial
+            echo "${{ secrets.GITHUB_TOKEN }}" | sudo docker login ghcr.io \
               -u ${{ github.actor }} --password-stdin
 
             # Update .env dengan rahasia dari GitHub
