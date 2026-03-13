@@ -78,13 +78,22 @@ jobs:
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            # Pull latest images
+            # Memastikan direktori target tersedia
+            mkdir -p ~/money-tracking
+            cd ~/money-tracking
+
+            # Jika belum ada file docker-compose, tarik mentah-mentah dari repo
+            if [ ! -f "docker-compose.yml" ]; then
+              echo "Downloading compose files..."
+              wget -qO docker-compose.yml https://raw.githubusercontent.com/${{ github.repository }}/main/docker-compose.yml
+              wget -qO Caddyfile https://raw.githubusercontent.com/${{ github.repository }}/main/Caddyfile
+            fi
+
+            # Login ke GitHub Container Registry
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
               -u ${{ github.actor }} --password-stdin
 
-            cd /opt/app
-
-            # Update .env dengan nilai terbaru
+            # Update .env dengan rahasia dari GitHub
             cat > .env << 'EOF'
             DB_HOST=${{ secrets.TF_VAR_db_host }}
             DB_NAME=${{ secrets.TF_VAR_db_name }}
@@ -96,16 +105,14 @@ jobs:
             GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
             N8N_ENCRYPTION_KEY=${{ secrets.N8N_ENCRYPTION_KEY }}
             DUCKDNS_TOKEN=${{ secrets.TF_VAR_duckdns_token }}
-            GITHUB_REPO=${{ github.repository_owner }}
+            GITHUB_REPO=${{ github.repository }}
+            GITHUB_OWNER=${{ github.repository_owner }}
             IMAGE_TAG=${{ github.sha }}
             EOF
 
-            # Copy docker compose & Caddyfile terbaru
-            # (file sudah ada via user_data atau manual copy pertama kali)
-
-            # Pull & restart services
+            # Pull image docker terbaru & restart
             docker compose pull backend frontend
             docker compose up -d backend frontend caddy
 
-            # Cleanup dangling images
+            # Bersihkan sampah
             docker image prune -f
