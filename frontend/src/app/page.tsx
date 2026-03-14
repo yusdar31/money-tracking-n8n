@@ -36,7 +36,8 @@ export default async function DashboardPage() {
 
     try {
         summary = await api.getSummary();
-    } catch (_) {
+    } catch (e) {
+        console.error('FAILED TO FETCH SUMMARY:', e);
         error = 'Tidak dapat terhubung ke server. Pastikan backend berjalan.';
     }
 
