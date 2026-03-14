@@ -52,10 +52,6 @@ export default async function DashboardPage() {
     const pct = Math.min(Number(budget?.pct_saving_risk ?? 0), 100);
     const dashOffset = CIRCUMFERENCE * (1 - pct / 100);
 
-import DashboardHeader from '@/components/DashboardHeader';
-
-// ... (sebelum return)
-
     return (
         <div className="p-8">
             {/* ── Header ─────────────────────────────────────────────────────── */}
