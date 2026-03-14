@@ -1,6 +1,8 @@
 // Centralized API client — semua fetch ke backend melewati sini
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = typeof window === 'undefined' 
+    ? 'http://backend:3001' // Server-side fetch (Docker internal network)
+    : process.env.NEXT_PUBLIC_API_URL || ''; // Client-side fetch
 
 async function apiFetch<T>(path: string): Promise<T> {
     const res = await fetch(`${API_URL}${path}`, {
