@@ -42,15 +42,30 @@ Aplikasi ini sekarang berjalan dengan arsitektur **microservices-lite** dan di-d
 
 ```mermaid
 graph TD
-    A[✉️ Bank Jago Email] -->|Polling| B(🔴 n8n Automation Engine)
-    B -->|Parse & Classify| C[(🐘 PostgreSQL Database)]
+    subgraph "☁️ AWS Cloud"
+        subgraph "🖥️ EC2 Instance (Docker Host)"
+            B(🔴 n8n Automation Engine)
+            G(⚙️ Express.js Backend)
+            H(⚛️ Next.js Frontend)
+            F(🟢 Caddy Reverse Proxy)
+            
+            F -->|/api/*| G
+            F -->|/*| H
+            H <-->|Fetch REST| G
+        end
+        
+        subgraph "🗄️ Managed Database"
+            C[(🐘 RDS PostgreSQL 15)]
+        end
+        
+        G <-->|Query Data| C
+        B -->|Parse & Classify| C
+    end
+
+    A[✉️ Bank Jago Email] -->|Polling| B
     B -->|AI Chat & Alerts| D[💬 Telegram Bot]
-    E[🧑‍💻 User via Browser] -->|HTTPS| F(🟢 Caddy Reverse Proxy)
-    F -->|/api/*| G(⚙️ Express.js Backend)
-    F -->|/*| H(⚛️ Next.js Frontend)
-    G <-->|Query Data| C
-    H <-->|Fetch REST| G
-    B -.->|Gemini LLM| I[🧠 Google Gemini API]
+    E[🧑‍💻 User via Browser] -->|HTTPS| F
+    B -.->|Gemini LLM| I[🧠 Google Gemini]
 ```
 
 ---
