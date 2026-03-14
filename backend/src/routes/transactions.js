@@ -38,7 +38,7 @@ router.get('/', async (req, res, next) => {
             conditions.push(`tanggal_waktu >= DATE_TRUNC('month', NOW()) AND tanggal_waktu < DATE_TRUNC('month', NOW()) + INTERVAL '1 month'`);
         }
 
-        if (tipe) {
+        if (tipe && (tipe === 'debit' || tipe === 'kredit')) {
             conditions.push(`tipe = $${paramIdx++}`);
             params.push(tipe);
         }

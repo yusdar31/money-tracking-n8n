@@ -91,7 +91,7 @@ export const api = {
     }) => {
         const qs = new URLSearchParams();
         if (params?.bulan) qs.set('bulan', params.bulan);
-        if (params?.tipe) qs.set('tipe', params.tipe);
+        if (params?.tipe && params.tipe !== 'all') qs.set('tipe', params.tipe);
         if (params?.kategori) qs.set('kategori', params.kategori);
         if (params?.limit) qs.set('limit', String(params.limit));
         if (params?.page) {
