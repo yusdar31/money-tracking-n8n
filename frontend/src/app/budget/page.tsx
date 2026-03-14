@@ -59,7 +59,7 @@ export default function BudgetPage() {
     const chartData = [...(budgets ?? [])]
         .reverse()
         .map((b) => ({
-            name: b.bulan_label.slice(0, 3), // "Mar"
+            name: (b.bulan_label || '').slice(0, 3), // "Mar"
             Pemasukan: Number(b.total_pemasukan),
             Pengeluaran: Number(b.total_pengeluaran),
             'Target Saving': Number(b.target_saving),
