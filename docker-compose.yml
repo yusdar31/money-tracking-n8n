@@ -53,11 +53,11 @@ services:
     build:
       context: ./frontend
       args:
-        - NEXT_PUBLIC_API_URL=https://${APP_DOMAIN}/api
+        - NEXT_PUBLIC_API_URL=https://${APP_DOMAIN}
     container_name: frontend
     restart: unless-stopped
     environment:
-      - NEXT_PUBLIC_API_URL=https://${APP_DOMAIN}/api
+      - NEXT_PUBLIC_API_URL=https://${APP_DOMAIN}
     ports:
       - "3000:3000"
     depends_on:
