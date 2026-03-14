@@ -2,6 +2,7 @@ import { api } from '@/lib/api';
 import { formatRupiah, formatDate } from '@/lib/utils';
 import clsx from 'clsx';
 import Link from 'next/link';
+import DashboardHeader from '@/components/DashboardHeader';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,19 +52,14 @@ export default async function DashboardPage() {
     const pct = Math.min(Number(budget?.pct_saving_risk ?? 0), 100);
     const dashOffset = CIRCUMFERENCE * (1 - pct / 100);
 
+import DashboardHeader from '@/components/DashboardHeader';
+
+// ... (sebelum return)
+
     return (
         <div className="p-8">
             {/* ── Header ─────────────────────────────────────────────────────── */}
-            <header className="flex justify-between items-center mb-8">
-                <div>
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Dashboard Overview</h2>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm">Welcome back, here&apos;s your spending summary.</p>
-                </div>
-                <button className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all shadow-lg shadow-primary/20">
-                    <span className="material-symbols-outlined text-sm">add</span>
-                    Tambah Transaksi
-                </button>
-            </header>
+            <DashboardHeader />
 
             {error && (
                 <div className="mb-6 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm flex items-center gap-2">

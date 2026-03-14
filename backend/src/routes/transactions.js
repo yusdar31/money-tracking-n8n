@@ -86,6 +86,48 @@ router.get('/', async (req, res, next) => {
 });
 
 /**
+ * POST /api/transactions
+ * Create a new manual transaction
+ */
+router.post('/', async (req, res, next) => {
+    try {
+        const { tanggal_waktu, tipe, nominal, merchant_deskripsi, kategori_otomatis } = req.body;
+
+        // Validasi dasar
+        if (!tipe || !['debit', 'kredit'].includes(tipe)) {
+            return res.status(400).json({ error: 'Tipe harus debit atau kredit' });
+        }
+        if (!nominal || isNaN(nominal) || nominal <= 0) {
+            return res.status(400).json({ error: 'Nominal harus angka positif' });
+        }
+        if (!merchant_deskripsi) {
+            return res.status(400).json({ error: 'Deskripsi transaksi wajib diisi' });
+        }
+
+        const result = await pool.query(
+            `INSERT INTO jago_transactions (
+                tanggal_waktu, 
+                tipe, 
+                nominal, 
+                merchant_deskripsi, 
+                kategori_otomatis
+            ) VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+            [
+                tanggal_waktu || new Date(),
+                tipe,
+                nominal,
+                merchant_deskripsi,
+                kategori_otomatis || 'Lain-lain'
+            ]
+        );
+
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        next(err);
+    }
+});
+
+/**
  * GET /api/transactions/:id
  */
 router.get('/:id', async (req, res, next) => {
