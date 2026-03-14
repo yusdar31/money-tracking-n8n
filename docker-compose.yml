@@ -27,7 +27,8 @@ services:
 
   # ── Backend REST API ────────────────────────────────────────────────────
   backend:
-    image: ghcr.io/${GITHUB_REPO}/money-tracking-backend:${IMAGE_TAG:-latest}
+    build:
+      context: ./backend
     container_name: backend
     restart: unless-stopped
     environment:
@@ -46,7 +47,10 @@ services:
 
   # ── Frontend Next.js ────────────────────────────────────────────────────
   frontend:
-    image: ghcr.io/${GITHUB_REPO}/money-tracking-frontend:${IMAGE_TAG:-latest}
+    build:
+      context: ./frontend
+      args:
+        - NEXT_PUBLIC_API_URL=https://${APP_DOMAIN}/api
     container_name: frontend
     restart: unless-stopped
     environment:
