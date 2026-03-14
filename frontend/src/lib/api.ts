@@ -2,7 +2,7 @@
 
 const API_URL = typeof window === 'undefined' 
     ? 'http://backend:3001' // Server-side fetch (Docker internal network TCP)
-    : 'https://yus-moneytracker.duckdns.org/api'; // Client-side hardcoded (Safe Route)
+    : 'https://yus-moneytracker.duckdns.org'; // Client-side hardcoded (Safe Route)
 
 async function apiFetch<T>(path: string): Promise<T> {
     const res = await fetch(`${API_URL}${path}`, {
