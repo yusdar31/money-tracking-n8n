@@ -39,9 +39,21 @@ export default function TransactionsPage() {
     );
 
     const txs = data?.data ?? [];
-    const meta = data?.meta;
+    const meta = data;
     const totalItems = meta?.total ?? 0;
     const totalPages = meta?.totalPages ?? 1;
+
+    const handleDelete = async (id: string) => {
+        if (!confirm('Hapus transaksi ini?')) return;
+        try {
+            await api.deleteTransaction(id);
+            // Refresh SWR
+            mutate(['transactions', bulan, tipe, page, limit]);
+            alert('Transaksi berhasil dihapus');
+        } catch (err) {
+            alert('Gagal menghapus transaksi');
+        }
+    };
 
     // Helper untuk format tanggal ala "24 Okt 2023"
     const formatTxDate = (dateStr: string) => {
@@ -135,19 +147,20 @@ export default function TransactionsPage() {
                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Kategori</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Tipe</th>
                                 <th className="px-6 py-4 text-right text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Nominal</th>
+                                <th className="px-6 py-4 text-center text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Aksi</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
                             {isLoading && txs.length === 0 && (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-12 text-center text-slate-400 text-sm animate-pulse">
+                                    <td colSpan={6} className="px-6 py-12 text-center text-slate-400 text-sm animate-pulse">
                                         Memuat transaksi...
                                     </td>
                                 </tr>
                             )}
                             {!isLoading && txs.length === 0 && (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-12 text-center text-slate-400 text-sm">
+                                    <td colSpan={6} className="px-6 py-12 text-center text-slate-400 text-sm">
                                         Tidak ada transaksi {tipe !== 'all' ? tipe : ''} bulan {formatBulan(bulan)}
                                     </td>
                                 </tr>
@@ -193,6 +206,14 @@ export default function TransactionsPage() {
                                         )}>
                                             {tx.tipe === 'debit' ? '- ' : '+ '}
                                             {formatRupiah(tx.nominal)}
+                                        </td>
+                                        <td className="px-6 py-5 text-center">
+                                            <button
+                                                onClick={() => handleDelete(tx.id)}
+                                                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                            >
+                                                <span className="material-symbols-outlined text-lg">delete</span>
+                                            </button>
                                         </td>
                                     </tr>
                                 );

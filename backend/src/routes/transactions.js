@@ -75,6 +75,7 @@ router.get('/', async (req, res, next) => {
 
         res.json({
             total: parseInt(countResult.rows[0].count),
+            totalPages: Math.ceil(parseInt(countResult.rows[0].count) / limit),
             limit: parseInt(limit),
             offset: parseInt(offset),
             data: dataResult.rows,
@@ -98,6 +99,25 @@ router.get('/:id', async (req, res, next) => {
             return res.status(404).json({ error: 'Transaction not found' });
         }
         res.json(result.rows[0]);
+    } catch (err) {
+        next(err);
+    }
+});
+
+/**
+ * DELETE /api/transactions/:id
+ */
+router.delete('/:id', async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query(
+            'DELETE FROM jago_transactions WHERE id = $1 RETURNING *',
+            [id]
+        );
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Transaction not found' });
+        }
+        res.json({ message: 'Transaction deleted successfully' });
     } catch (err) {
         next(err);
     }

@@ -19,11 +19,14 @@ services:
       - DB_POSTGRESDB_DATABASE=${DB_NAME}
       - DB_POSTGRESDB_USER=${DB_USER}
       - DB_POSTGRESDB_PASSWORD=${DB_PASSWORD}
-      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_ACTIVE=false
       - N8N_BASIC_AUTH_USER=admin
       - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
       - WEBHOOK_URL=https://${N8N_DOMAIN}/
       - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+      - N8N_HOST=${N8N_DOMAIN}
+      - N8N_EDITOR_BASE_URL=https://${N8N_DOMAIN}/
+      - N8N_PROTOCOL=https
     ports:
       - "5678:5678"
     volumes:
@@ -35,10 +38,11 @@ services:
       context: ./backend
     container_name: backend
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}/${DB_NAME}
       - PORT=3001
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - DB_SSL=true
     ports:
       - "3001:3001"
     depends_on:

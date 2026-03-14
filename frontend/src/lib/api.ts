@@ -30,6 +30,7 @@ export interface Transaction {
 
 export interface TransactionList {
     total: number;
+    totalPages: number;
     limit: number;
     offset: number;
     data: Transaction[];
@@ -84,15 +85,28 @@ export const api = {
         tipe?: string;
         kategori?: string;
         limit?: number;
-        offset?: number;
+        page?: number;
     }) => {
         const qs = new URLSearchParams();
         if (params?.bulan) qs.set('bulan', params.bulan);
         if (params?.tipe) qs.set('tipe', params.tipe);
         if (params?.kategori) qs.set('kategori', params.kategori);
         if (params?.limit) qs.set('limit', String(params.limit));
-        if (params?.offset) qs.set('offset', String(params.offset));
+        if (params?.page) {
+            const offset = (params.page - 1) * (params.limit || 10);
+            qs.set('offset', String(offset));
+        }
         return apiFetch<TransactionList>(`/api/transactions?${qs}`);
+    },
+
+    deleteTransaction: (id: string) => {
+        return fetch(`${API_URL}/api/transactions/${id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+        }).then(res => {
+            if (!res.ok) throw new Error('Failed to delete transaction');
+            return res.json();
+        });
     },
 
     getBudget: (params?: { tahun?: number; bulan?: string }) => {

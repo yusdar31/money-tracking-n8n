@@ -1,6 +1,7 @@
 import { api } from '@/lib/api';
 import { formatRupiah, formatDate } from '@/lib/utils';
 import clsx from 'clsx';
+import Link from 'next/link';
 
 export const revalidate = 30;
 
@@ -146,9 +147,9 @@ export default async function DashboardPage() {
                     <div className="bg-white dark:bg-card-dark rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
                         <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
                             <h3 className="font-bold text-lg">Transaksi Terbaru</h3>
-                            <a href="/transactions" className="text-primary text-sm font-semibold hover:underline">
+                            <Link href="/transactions" className="text-primary text-sm font-semibold hover:underline">
                                 Lihat Semua
-                            </a>
+                            </Link>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
