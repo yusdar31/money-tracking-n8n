@@ -55,6 +55,25 @@ graph TD
 
 ---
 
+## ☁️ Arsitektur Cloud (AWS & Terraform)
+
+Sistem ini didesain berskala *production-ready* dengan infrastruktur berbasis cloud di Amazon Web Services (AWS), yang sepenuhnya dikelola melalui **Terraform (Infrastructure as Code)**.
+
+### Komponen Infrastruktur:
+- **AWS EC2 (`t3.micro`)**: Berperan sebagai host utama untuk menjalankan environment Docker (Next.js, Express, n8n, dan Caddy).
+- **AWS RDS (`db.t3.micro`, PostgreSQL 15)**: Layanan database terkelola (Managed DB) yang memisahkan beban penyimpanan data dari server aplikasi untuk keandalan tinggi.
+- **Security Groups (Firewall)**: Mengatur lalu lintas masuk secara ketat, hanya mengizinkan port HTTP (80), HTTPS (443), SSH (22), dan port spesifik (3000, 3001, 5678) sesuai kebutuhan service.
+- **DuckDNS**: Layanan Dynamic DNS gratis untuk memetakan IP publik EC2 ke nama domain yang mudah diingat dan memudahkan pengelolaan SSL/HTTPS via Caddy.
+
+### Workflow CI/CD (GitHub Actions)
+Setiap pembaruan kode pada branch `main` akan memicu *GitHub Actions Pipeline* yang secara otomatis:
+1. Melakukan SSH ke server EC2.
+2. Mengambil (pull) kode terbaru dari repository github.
+3. Menyuntikkan Github Secrets sebagai *Environment Variables*.
+4. Membangun ulang (rebuild) container Docker tanpa downtime signifikan.
+
+---
+
 ## 📁 Struktur Proyek (Monorepo)
 
 ```text
