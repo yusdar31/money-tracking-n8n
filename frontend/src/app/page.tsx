@@ -3,7 +3,7 @@ import { formatRupiah, formatDate } from '@/lib/utils';
 import clsx from 'clsx';
 import Link from 'next/link';
 
-export const revalidate = 30;
+export const dynamic = 'force-dynamic';
 
 // ── Category icon & color map ─────────────────────────────────────────────
 const categoryStyle: Record<string, { icon: string; bg: string; text: string }> = {

@@ -1,14 +1,16 @@
 // Centralized API client — semua fetch ke backend melewati sini
 
 const API_URL = typeof window === 'undefined' 
-    ? 'http://backend:3001' // Server-side fetch (Docker internal network TCP)
-    : 'https://yus-moneytracker.duckdns.org'; // Client-side hardcoded (Safe Route)
+    ? (process.env.BACKEND_INTERNAL_URL || 'http://backend:3001') // Server-side (Docker link)
+    : (process.env.NEXT_PUBLIC_API_URL || ''); // Client-side (Public API)
 
 async function apiFetch<T>(path: string): Promise<T> {
-    const res = await fetch(`${API_URL}${path}`, {
+    const url = path.startsWith('http') ? path : `${API_URL}${path}`;
+    const res = await fetch(url, {
         headers: { 'Content-Type': 'application/json' },
-        next: { revalidate: 30 }, // ISR: revalidate tiap 30 detik
+        cache: 'no-store', // Selalu ambil data terbaru
     });
+
     if (!res.ok) {
         throw new Error(`API error ${res.status}: ${await res.text()}`);
     }
