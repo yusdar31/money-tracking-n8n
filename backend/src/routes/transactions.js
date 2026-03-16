@@ -147,6 +147,54 @@ router.get('/:id', async (req, res, next) => {
 });
 
 /**
+ * PUT /api/transactions/:id
+ * Update an existing transaction
+ */
+router.put('/:id', async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { tanggal_waktu, tipe, nominal, merchant_deskripsi, kategori_otomatis } = req.body;
+
+        // Validasi dasar
+        if (!tipe || !['debit', 'kredit'].includes(tipe)) {
+            return res.status(400).json({ error: 'Tipe harus debit atau kredit' });
+        }
+        if (!nominal || isNaN(nominal) || nominal <= 0) {
+            return res.status(400).json({ error: 'Nominal harus angka positif' });
+        }
+        if (!merchant_deskripsi) {
+            return res.status(400).json({ error: 'Deskripsi transaksi wajib diisi' });
+        }
+
+        const result = await pool.query(
+            `UPDATE jago_transactions 
+             SET tanggal_waktu = $1, 
+                 tipe = $2, 
+                 nominal = $3, 
+                 merchant_deskripsi = $4, 
+                 kategori_otomatis = $5
+             WHERE id = $6 RETURNING *`,
+            [
+                tanggal_waktu || new Date(),
+                tipe,
+                nominal,
+                merchant_deskripsi,
+                kategori_otomatis || 'Lain-lain',
+                id
+            ]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Transaction not found' });
+        }
+
+        res.json(result.rows[0]);
+    } catch (err) {
+        next(err);
+    }
+});
+
+/**
  * DELETE /api/transactions/:id
  */
 router.delete('/:id', async (req, res, next) => {

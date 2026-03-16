@@ -128,6 +128,23 @@ export const api = {
         });
     },
 
+    updateTransaction: (id: string, data: {
+        tanggal_waktu: string;
+        tipe: 'debit' | 'kredit';
+        nominal: number;
+        merchant_deskripsi: string;
+        kategori_otomatis: string;
+    }) => {
+        return fetch(`${API_URL}/api/transactions/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        }).then(res => {
+            if (!res.ok) throw new Error('Failed to update transaction');
+            return res.json();
+        });
+    },
+
     getBudget: (params?: { tahun?: number; bulan?: string }) => {
         const qs = new URLSearchParams();
         if (params?.tahun) qs.set('tahun', String(params.tahun));

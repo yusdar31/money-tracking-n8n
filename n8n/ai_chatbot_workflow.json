@@ -1,4 +1,4 @@
-﻿{
+{
     "name": "AI Money Tracker Chatbot",
     "nodes": [
         {
@@ -405,7 +405,7 @@
                 "sendBody": true,
                 "contentType": "raw",
                 "rawContentType": "application/json",
-                "body": "={\"contents\":[{\"parts\":[{\"text\":\"Kamu adalah asisten keuangan Money Tracker AI untuk Bank Jago.\\n\\nStruktur database PostgreSQL:\\n- jago_transactions: id, tanggal_waktu, tipe (debit/kredit/transfer_pocket), nominal, merchant_deskripsi, kategori_otomatis, saldo_akhir\\n- monthly_budget: bulan, target_saving, total_pengeluaran, total_pemasukan, sisa_budget, pct_saving_risk\\n- saldo_rekening: id, saldo_sekarang, updated_at\\n\\nPerintah pengguna: {{ $json.userMessage }}\\n\\nBerikan HANYA respons JSON berikut (tanpa markdown, tanpa komentar):\\n{\\\"action\\\":\\\"query atau update atau info\\\",\\\"sql\\\":\\\"SQL query PostgreSQL jika perlu, atau string kosong\\\",\\\"responseTemplate\\\":\\\"Pesan Bahasa Indonesia dengan emoji. Jika butuh data DB tulis {DATA} sebagai placeholder\\\",\\\"message\\\":\\\"Jika action=info isi pesan di sini, jika tidak biarkan kosong\\\"}\\n\\nAturan:\\n- action=query: untuk membaca data (SELECT)\\n- action=update: untuk mengubah data (UPDATE/INSERT/DELETE)\\n- action=info: untuk percakapan biasa tanpa perlu DB\\n- Untuk bulan ini gunakan: DATE_TRUNC('month', NOW())::DATE\\n- responseTemplate diisi selalu kecuali action=info\\n\\nINGAT: HANYA output JSON!\"}]}]}",
+                "body": "={\"contents\":[{\"parts\":[{\"text\":\"Kamu adalah asisten keuangan Money Tracker AI untuk Bank Jago.\\n\\nStruktur database PostgreSQL:\\n- jago_transactions: id, tanggal_waktu, tipe (debit/kredit/transfer_pocket), nominal, merchant_deskripsi, kategori_otomatis, saldo_akhir\\n- monthly_budget: bulan, target_saving, total_pengeluaran, total_pemasukan, sisa_budget, pct_saving_risk\\n- saldo_rekening: id, saldo_sekarang, updated_at\\n\\nPerintah pengguna: {{ $json.userMessage }}\\n\\nBerikan HANYA respons JSON berikut (tanpa markdown, tanpa komentar):\\n{\\\"action\\\":\\\"query atau update atau info\\\",\\\"sql\\\":\\\"SQL query PostgreSQL jika perlu, atau string kosong\\\",\\\"responseTemplate\\\":\\\"Pesan Bahasa Indonesia dengan emoji. Jika butuh data DB tulis {DATA} sebagai placeholder\\\",\\\"message\\\":\\\"Jika action=info isi pesan di sini, jika tidak biarkan kosong\\\"}\\n\\nAturan:\\n- action=query: untuk membaca data (SELECT)\\n- action=update: untuk mengubah/edit data (UPDATE/INSERT/DELETE)\\\\n- Jika user minta edit/ubah/hapus transaksi, buat query UPDATE/DELETE pada jago_transactions\\\\n- action=info: untuk percakapan biasa tanpa perlu DB\\n- Untuk bulan ini gunakan: DATE_TRUNC('month', NOW())::DATE\\n- responseTemplate diisi selalu kecuali action=info\\n\\nINGAT: HANYA output JSON!\"}]}]}",
                 "options": {}
             },
             "id": "node-gemini-parse",

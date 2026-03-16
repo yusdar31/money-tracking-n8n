@@ -6,6 +6,8 @@ import { api } from '@/lib/api';
 import { formatRupiah, currentMonth, formatBulan } from '@/lib/utils';
 
 import clsx from 'clsx';
+import EditTransactionModal from '@/components/EditTransactionModal';
+import type { Transaction } from '@/lib/api';
 
 // Icon map for Transaction Category
 const CATEGORY_STYLE: Record<string, { icon: string; bg: string; text: string }> = {
@@ -29,10 +31,11 @@ export default function TransactionsPage() {
     const [bulan, setBulan] = useState(currentMonth());
     const [tipe, setTipe] = useState<'all' | 'debit' | 'kredit'>('all');
     const [page, setPage] = useState(1);
+    const [editingTx, setEditingTx] = useState<Transaction | null>(null);
     const limit = 10;
 
     // SWR fetch with keepPreviousData for smooth pagination
-    const { data, isLoading } = useSWR(
+    const { data, isLoading, mutate } = useSWR(
         ['transactions', bulan, tipe, page, limit],
         () => api.getTransactions({ bulan, tipe, page, limit }),
         { keepPreviousData: true }
@@ -208,12 +211,20 @@ export default function TransactionsPage() {
                                             {formatRupiah(tx.nominal)}
                                         </td>
                                         <td className="px-6 py-5 text-center">
-                                            <button
-                                                onClick={() => handleDelete(tx.id)}
-                                                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                            >
-                                                <span className="material-symbols-outlined text-lg">delete</span>
-                                            </button>
+                                            <div className="flex items-center justify-center gap-1">
+                                                <button
+                                                    onClick={() => setEditingTx(tx)}
+                                                    className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                                >
+                                                    <span className="material-symbols-outlined text-lg">edit</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(tx.id)}
+                                                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                                >
+                                                    <span className="material-symbols-outlined text-lg">delete</span>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 );
@@ -250,6 +261,13 @@ export default function TransactionsPage() {
                     </div>
                 </div>
             )}
+
+            <EditTransactionModal
+                isOpen={!!editingTx}
+                onClose={() => setEditingTx(null)}
+                onSuccess={() => { mutate(); }}
+                transaction={editingTx}
+            />
         </div>
     );
 }
